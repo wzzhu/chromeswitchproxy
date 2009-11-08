@@ -1,0 +1,29 @@
+<html>
+<head>
+<script>
+  chrome.extension.onConnect.addListener(function(port) {    
+    port.onMessage.addListener(function(msg) {
+	var state = false;
+      if (msg.cmd == "ToggleProxyState") {
+	    state = document.getElementById("pluginobj").toggleProxyState(); 		
+      }	 else if (msg.cmd == "GetProxyState") {
+	    state = document.getElementById("pluginobj").getProxyState(); 		
+	  }
+	  updateUI(state);
+    });
+  });
+
+  function updateUI(state) {
+    var views = chrome.extension.getViews();
+    for (var i in views) {
+      if (views[i].showProxyState)
+        views[i].showProxyState(state);
+    }
+  }
+</script>
+</head>
+<body>
+<object id="pluginobj" type="application/x-switch-wininet-proxy" hidden="true">
+Failed to load np plugin. You might be using the old version of the extension.</object>
+</body>
+</html>

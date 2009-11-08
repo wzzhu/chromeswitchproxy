@@ -1,0 +1,21 @@
+<body onload = "onLoad();">
+<div class="proxy-button" id="btn" onclick="onClick()">
+Proxy
+</div>
+<script>
+function showProxyState(state) {
+   var color = "#C0C0C0";
+   if (state == 1) {
+     color = "green";
+   }
+   document.getElementById("btn").style.color = color;
+}
+
+function onClick() {
+  chrome.extension.connect().postMessage({cmd: "ToggleProxyState"});
+}
+
+function onLoad() {
+ chrome.extension.connect().postMessage({cmd: "GetProxyState"});
+}
+</script></body>

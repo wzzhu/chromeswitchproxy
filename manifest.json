@@ -1,0 +1,15 @@
+{
+  "name": "Switch HTTP Proxy",
+  "version": "1.0",
+  "description": "Switch Chrome proxy setting with one click in status bar.",
+  "toolstrips": [
+    "toolstrip.html"
+  ],
+   "permissions": [
+    "tabs"
+  ],
+  "background_page": "background.html",
+  "plugins": [
+    { "path": "plugin/Release/npswitchproxy.dll", "public":true }
+  ]
+}
