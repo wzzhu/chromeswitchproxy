@@ -15,6 +15,7 @@ Global
 		{2A26E3AB-1664-4474-87A6-2EFF2C85913A}.Debug|Win32.ActiveCfg = Debug|Win32
 		{2A26E3AB-1664-4474-87A6-2EFF2C85913A}.Debug|Win32.Build.0 = Debug|Win32
 		{2A26E3AB-1664-4474-87A6-2EFF2C85913A}.Release|Smartphone 2003 (ARMV4).ActiveCfg = Release|Win32
+		{2A26E3AB-1664-4474-87A6-2EFF2C85913A}.Release|Smartphone 2003 (ARMV4).Build.0 = Release|Win32
 		{2A26E3AB-1664-4474-87A6-2EFF2C85913A}.Release|Win32.ActiveCfg = Release|Win32
 		{2A26E3AB-1664-4474-87A6-2EFF2C85913A}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection

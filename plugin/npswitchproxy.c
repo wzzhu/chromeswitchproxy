@@ -148,20 +148,19 @@ static void DebugLog(const char *msg) {
 #endif
 }
 
-static bool
-HasMethod(NPObject* obj, NPIdentifier methodName) {
+static bool HasMethod(NPObject* obj, NPIdentifier methodName) {
 	DebugLog("npswitchproxy: HasMethod\n");
 	return true;
 }
 
-static bool
-InvokeDefault(NPObject *obj, const NPVariant *args, uint32_t argCount, NPVariant *result) {
+static bool InvokeDefault(NPObject *obj, const NPVariant *args,
+						  uint32_t argCount, NPVariant *result) {
 	DebugLog("npswitchproxy: InvokeDefault\n");	
 	return true;
 }
 
-static bool
-InvokeGetProxyState(NPObject *obj, const NPVariant *args, uint32_t argCount, NPVariant *result) {
+static bool InvokeGetProxyState(NPObject *obj, const NPVariant *args,
+								uint32_t argCount, NPVariant *result) {
 	DebugLog("npswitchproxy: InvokeGetProxyState\n");
 	ProxyState state = GetWinInetProxyState();
 	result->type = NPVariantType_Int32;	
@@ -175,8 +174,8 @@ InvokeGetProxyState(NPObject *obj, const NPVariant *args, uint32_t argCount, NPV
 	return true;
 }
 
-static bool
-InvokeToggleProxyState(NPObject *obj, const NPVariant *args, uint32_t argCount, NPVariant *result) {
+static bool InvokeToggleProxyState(NPObject *obj, const NPVariant *args,
+								   uint32_t argCount, NPVariant *result) {
 	DebugLog("npswitchproxy: InvokeToggleProxyState\n");
 	ProxyState state = ToggleWinInetProxyState();
 	result->type = NPVariantType_Int32;	
@@ -190,8 +189,8 @@ InvokeToggleProxyState(NPObject *obj, const NPVariant *args, uint32_t argCount, 
 	return true;
 }
 
-static bool
-Invoke(NPObject* obj, NPIdentifier methodName, const NPVariant *args, uint32_t argCount, NPVariant *result) {
+static bool Invoke(NPObject* obj, NPIdentifier methodName,
+				   const NPVariant *args, uint32_t argCount, NPVariant *result) {
 	DebugLog("npswitchproxy: Invoke\n");
 	char *name = npnfuncs->utf8fromidentifier(methodName);
 	if(name && !strcmp((const char *)name, "getProxyState")) {
@@ -205,14 +204,13 @@ Invoke(NPObject* obj, NPIdentifier methodName, const NPVariant *args, uint32_t a
 	}
 }
 
-static bool
-HasProperty(NPObject *obj, NPIdentifier propertyName) {
+static bool HasProperty(NPObject *obj, NPIdentifier propertyName) {
 	DebugLog("npswitchproxy: HasProperty\n");
 	return false;
 }
 
-static bool
-GetProperty(NPObject *obj, NPIdentifier propertyName, NPVariant *result) {
+static bool GetProperty(NPObject *obj, NPIdentifier propertyName,
+						NPVariant *result) {
 	DebugLog("npswitchproxy: GetProperty\n");
 	return false;
 }
@@ -233,30 +231,30 @@ static NPClass npcRefObject = {
 
 /* NPP */
 
-static NPError
-NewNPInstance(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc, char *argn[], char *argv[], NPSavedData *saved) {
+static NPError NewNPInstance(NPMIMEType pluginType, NPP instance,
+							 uint16 mode, int16 argc, char *argn[],
+							 char *argv[], NPSavedData *saved) {
 	DebugLog("npswitchproxy: new\n");
 	return NPERR_NO_ERROR;
 }
 
-static NPError
-DestroyNPInstance(NPP instance, NPSavedData **save) {
-	if(so)
+static NPError DestroyNPInstance(NPP instance, NPSavedData **save) {
+	if(so) {
 		npnfuncs->releaseobject(so);
+	}
 	so = NULL;
 	DebugLog("npswitchproxy: DestroyNPInstance\n");
 	return NPERR_NO_ERROR;
 }
 
-static NPError
-GetValue(NPP instance, NPPVariable variable, void *value) {
+static NPError GetValue(NPP instance, NPPVariable variable, void *value) {
 	switch(variable) {
 	default:
 		DebugLog("npswitchproxy: GetValue - default\n");
 		return NPERR_GENERIC_ERROR;
 	case NPPVpluginNameString:
 		DebugLog("npswitchproxy: GetValue - name string\n");
-		*((char **)value) = "AplixFooPlugin";
+		*((char **)value) = "SwitchProxyPlugin";
 		break;
 	case NPPVpluginDescriptionString:
 		DebugLog("npswitchproxy: GetValue - description string\n");
@@ -279,14 +277,14 @@ GetValue(NPP instance, NPPVariable variable, void *value) {
 	return NPERR_NO_ERROR;
 }
 
-static NPError /* expected by Safari on Darwin */
-HandleEvent(NPP instance, void *ev) {
+/* expected by Safari on Darwin */
+static NPError HandleEvent(NPP instance, void *ev) {
 	DebugLog("npswitchproxy: HandleEvent\n");
 	return NPERR_NO_ERROR;
 }
 
-static NPError /* expected by Opera */
-SetWindow(NPP instance, NPWindow* pNPWindow) {
+/* expected by Opera */
+static NPError SetWindow(NPP instance, NPWindow* pNPWindow) {
 	DebugLog("npswitchproxy: SetWindow\n");
 	return NPERR_NO_ERROR;
 }
@@ -296,69 +294,63 @@ SetWindow(NPP instance, NPWindow* pNPWindow) {
 extern "C" {
 #endif
 
-	NPError OSCALL
-		NP_GetEntryPoints(NPPluginFuncs *nppfuncs) {
-			DebugLog("npswitchproxy: NP_GetEntryPoints\n");
-			nppfuncs->version       = (NP_VERSION_MAJOR << 8) | NP_VERSION_MINOR;
-			nppfuncs->newp          = NewNPInstance;
-			nppfuncs->destroy       = DestroyNPInstance;
-			nppfuncs->getvalue      = GetValue;
-			nppfuncs->event         = HandleEvent;
-			nppfuncs->setwindow     = SetWindow;
-
-			return NPERR_NO_ERROR;
-	}
+NPError OSCALL NP_GetEntryPoints(NPPluginFuncs *nppfuncs) {
+	DebugLog("npswitchproxy: NP_GetEntryPoints\n");
+	nppfuncs->version = (NP_VERSION_MAJOR << 8) | NP_VERSION_MINOR;
+	nppfuncs->newp = NewNPInstance;
+	nppfuncs->destroy = DestroyNPInstance;
+	nppfuncs->getvalue = GetValue;
+	nppfuncs->event = HandleEvent;
+	nppfuncs->setwindow = SetWindow;
+	return NPERR_NO_ERROR;
+}
 
 #ifndef HIBYTE
 #define HIBYTE(x) ((((uint32)(x)) & 0xff00) >> 8)
 #endif
 
-	NPError OSCALL
-		NP_Initialize(NPNetscapeFuncs *npnf
+NPError OSCALL NP_Initialize(NPNetscapeFuncs *npnf
 #if !defined(_WINDOWS) && !defined(WEBKIT_DARWIN_SDK)
-		, NPPluginFuncs *nppfuncs)
+							 , NPPluginFuncs *nppfuncs) {
 #else
-		)
-#endif
-	{
-		DebugLog("npswitchproxy: NP_Initialize\n");
-		if(npnf == NULL)
-			return NPERR_INVALID_FUNCTABLE_ERROR;
-
-		if(HIBYTE(npnf->version) > NP_VERSION_MAJOR)
-			return NPERR_INCOMPATIBLE_VERSION_ERROR;
-
-		npnfuncs = npnf;
+							 ) {
+#endif	
+	DebugLog("npswitchproxy: NP_Initialize\n");
+	if(npnf == NULL) {
+		return NPERR_INVALID_FUNCTABLE_ERROR;
+	}
+	if(HIBYTE(npnf->version) > NP_VERSION_MAJOR) {
+		return NPERR_INCOMPATIBLE_VERSION_ERROR;
+	}
+	npnfuncs = npnf;
 #if !defined(_WINDOWS) && !defined(WEBKIT_DARWIN_SDK)
-		NP_GetEntryPoints(nppfuncs);
+	NP_GetEntryPoints(nppfuncs);
 #endif
 #ifdef WIN32
-		if (!LoadWinInetDll()) {
-			return NPERR_MODULE_LOAD_FAILED_ERROR;
-		}
-#endif
-		return NPERR_NO_ERROR;
+	if (!LoadWinInetDll()) {
+		return NPERR_MODULE_LOAD_FAILED_ERROR;
 	}
+#endif
+	return NPERR_NO_ERROR;
+}
 
-	NPError
-		OSCALL NP_Shutdown() {
-			DebugLog("npswitchproxy: NP_Shutdown\n");
+NPError	OSCALL NP_Shutdown() {
+	DebugLog("npswitchproxy: NP_Shutdown\n");
 #ifdef WIN32
-			UnloadWinInetDll();
+	UnloadWinInetDll();
 #endif
-			return NPERR_NO_ERROR;
-	}
+	return NPERR_NO_ERROR;
+}
 
-	char *
-		NP_GetMIMEDescription(void) {
-			DebugLog("npswitchproxy: NP_GetMIMEDescription\n");
-			return "application/x-switch-wininet-proxy::wzzhu@cs.hku.hk";
-	}
+char* NP_GetMIMEDescription(void) {
+	DebugLog("npswitchproxy: NP_GetMIMEDescription\n");
+	return "application/x-switch-wininet-proxy::wzzhu@cs.hku.hk";
+}
 
-	NPError OSCALL /* needs to be present for WebKit based browsers */
-		NP_GetValue(void *npp, NPPVariable variable, void *value) {
-			return GetValue((NPP)npp, variable, value);
-	}
+/* needs to be present for WebKit based browsers */
+NPError OSCALL NP_GetValue(void *npp, NPPVariable variable, void *value) {
+	return GetValue((NPP)npp, variable, value);
+}
 
 #ifdef __cplusplus
 }
