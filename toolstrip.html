@@ -1,14 +1,14 @@
 <body onload = "onLoad();">
 <div class="proxy-button" id="btn" onclick="onClick()">
-Proxy
+<img src="proxy_off.png" id="img">
 </div>
 <script>
 function showProxyState(state) {
-   var color = "#C0C0C0";
+   var img_src = "proxy_off.png";
    if (state == 1) {
-     color = "green";
+     img_src = "proxy_on.png";
    }
-   document.getElementById("btn").style.color = color;
+   document.getElementById("img").src = img_src;
 }
 
 function onClick() {

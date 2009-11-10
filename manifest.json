@@ -10,6 +10,6 @@
   ],
   "background_page": "background.html",
   "plugins": [
-    { "path": "plugin/Release/npswitchproxy.dll", "public":true }
+    { "path": "plugin/npswitchproxy.dll", "public":true }
   ]
 }
