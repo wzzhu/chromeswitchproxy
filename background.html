@@ -1,24 +1,22 @@
 <html>
 <head>
 <script>
-  chrome.extension.onConnect.addListener(function(port) {    
-    port.onMessage.addListener(function(msg) {
-	var state = false;
-      if (msg.cmd == "ToggleProxyState") {
-	    state = document.getElementById("pluginobj").toggleProxyState(); 		
-      }	 else if (msg.cmd == "GetProxyState") {
-	    state = document.getElementById("pluginobj").getProxyState(); 		
-	  }
+  chrome.browserAction.onClicked.addListener(function(tab) {    
+	  var state = document.getElementById("pluginobj").toggleProxyState(); 		
 	  updateUI(state);
-    });
+  });
+
+	chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+	  var state = document.getElementById("pluginobj").getProxyState(); 		
+	  updateUI(state);
   });
 
   function updateUI(state) {
-    var views = chrome.extension.getViews();
-    for (var i in views) {
-      if (views[i].showProxyState)
-        views[i].showProxyState(state);
-    }
+		var icon_path = "proxy_off.png";
+    if (state) {
+		  icon_path = "proxy_on.png";
+		}
+		chrome.browserAction.setIcon({path: icon_path});
   }
 </script>
 </head>
