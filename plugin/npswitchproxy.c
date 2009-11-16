@@ -50,11 +50,20 @@ bool LoadWinInetDll() {
 	pInternetQueryOption = (InternetQueryOptionFunc)GetProcAddress(
 		HMODULE(hWinInetLib), "InternetQueryOptionA");
 	if (pInternetQueryOption == NULL) {
+    pInternetQueryOption = (InternetQueryOptionFunc)GetProcAddress(
+		HMODULE(hWinInetLib), "InternetQueryOptionW");
+  }
+  if (pInternetQueryOption == NULL) {
 		FreeLibrary(hWinInetLib);
 		return false;
 	}
 	pInternetSetOption = (InternetSetOptionFunc)GetProcAddress(
 		HMODULE(hWinInetLib), "InternetSetOptionA");
+
+  if (pInternetSetOption == NULL) {
+    pInternetSetOption = (InternetSetOptionFunc)GetProcAddress(
+		HMODULE(hWinInetLib), "InternetSetOptionW");
+  }
 	if (pInternetSetOption == NULL) {
 		FreeLibrary(hWinInetLib);
 		return false;
