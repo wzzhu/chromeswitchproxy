@@ -6,9 +6,10 @@
     "default_title": "Toggle HTTP Proxy",
     "default_icon": "proxy_off.png"
   },
-   "permissions": [
+  "permissions": [
     "tabs"
   ],
+  "icons": {"32": "switchproxy.png"},
   "background_page": "background.html",
   "plugins": [
     { "path": "plugin/npswitchproxy.dll", "public": true }
