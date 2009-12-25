@@ -9,7 +9,7 @@
   "permissions": [
     "tabs"
   ],
-  "icons": {"32": "switchproxy.png"},
+  "icons": {"32": "switchproxy.jpg"},
   "background_page": "background.html",
   "plugins": [
     { "path": "plugin/npswitchproxy.dll", "public": true }
