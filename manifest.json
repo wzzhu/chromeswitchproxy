@@ -1,7 +1,7 @@
 {
   "name": "Switch HTTP Proxy",
-  "version": "1.3",
-  "description": "Switch Chrome proxy setting with one click in status bar.",
+  "version": "1.4",
+  "description": "Switch Chrome proxy setting with one click.",
   "browser_action": { 
     "default_title": "Toggle HTTP Proxy",
     "default_icon": "proxy_off.png"
@@ -9,7 +9,6 @@
   "permissions": [
     "tabs"
   ],
-  "icons": {"32": "switchproxy.jpg"},
   "background_page": "background.html",
   "plugins": [
     { "path": "plugin/npswitchproxy.dll", "public": true }

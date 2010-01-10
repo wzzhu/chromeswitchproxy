@@ -1,23 +1,27 @@
 <html>
 <head>
 <script>
-  chrome.browserAction.onClicked.addListener(function(tab) {    
-	  var state = document.getElementById("pluginobj").toggleProxyState(); 		
-	  updateUI(state);
-  });
-
-	chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-	  var state = document.getElementById("pluginobj").getProxyState(); 		
-	  updateUI(state);
-  });
-
-  function updateUI(state) {
-		var icon_path = "proxy_off.png";
-    if (state) {
-		  icon_path = "proxy_on.png";
-		}
-		chrome.browserAction.setIcon({path: icon_path});
+function updateUI(state) {
+  var icon_path = "proxy_off.png";
+  var proxy_state = "Proxy is off";
+  if (state) {
+    icon_path = "proxy_on.png";
+    proxy_state = "Proxy is on";
   }
+  chrome.browserAction.setIcon({path: icon_path});
+  chrome.browserAction.setTitle({title: proxy_state});
+}
+
+chrome.browserAction.onClicked.addListener(function(tab) {
+  updateUI(document.getElementById("pluginobj").toggleProxyState());
+}); 
+chrome.tabs.onCreated.addListener(function(tabId, changeInfo, tab) {
+  updateUI(document.getElementById("pluginobj").getProxyState());
+});
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+  updateUI(document.getElementById("pluginobj").getProxyState());
+});
+
 </script>
 </head>
 <body>

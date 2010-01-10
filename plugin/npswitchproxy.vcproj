@@ -120,14 +120,14 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
+				Optimization="3"
 				AdditionalIncludeDirectories="&quot;\gecko-sdk\include&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;XP_WIN32;MOZILLA_STRICT_API;XPCOM_GLUE;XP_WIN;_X86_;NPSIMPLE_EXPORTS;XULRUNNER_SDK"
-				MinimalRebuild="true"
+				MinimalRebuild="false"
 				BasicRuntimeChecks="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="4"
+				DebugInformationFormat="0"
 				CallingConvention="0"
 			/>
 			<Tool
@@ -144,7 +144,7 @@
 				LinkIncremental="2"
 				GenerateManifest="false"
 				ModuleDefinitionFile="npswitchproxy.def"
-				GenerateDebugInformation="true"
+				GenerateDebugInformation="false"
 				SubSystem="1"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
