@@ -15,7 +15,7 @@ function updateUI(state) {
 chrome.browserAction.onClicked.addListener(function(tab) {
   updateUI(document.getElementById("pluginobj").toggleProxyState());
 }); 
-chrome.tabs.onCreated.addListener(function(tabId, changeInfo, tab) {
+chrome.tabs.onCreated.addListener(function(tab) {
   updateUI(document.getElementById("pluginobj").getProxyState());
 });
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
