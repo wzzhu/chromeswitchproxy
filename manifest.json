@@ -6,11 +6,16 @@
     "default_title": "Toggle HTTP Proxy",
     "default_icon": "proxy_off.png"
   },
+  "icons": { 
+   "32": "switch_proxy_32x32.png",
+   "48": "switch_proxy_48x48.png",
+   "128": "switch_proxy_128x128.png"
+  },
   "permissions": [
     "tabs"
   ],
   "background_page": "background.html",
   "plugins": [
-    { "path": "plugin/npswitchproxy.dll", "public": true }
+    { "path": "plugin/npswitchproxy.dll", "public": false }
   ]
 }

@@ -1,25 +1,29 @@
 <html>
 <head>
 <script>
-function updateUI(state) {
+function updateUI(state, connection_name) {
   var icon_path = "proxy_off.png";
   var proxy_state = "Proxy is off";
   if (state) {
     icon_path = "proxy_on.png";
     proxy_state = "Proxy is on";
   }
+  var title = connection_name + " : " + proxy_state;
   chrome.browserAction.setIcon({path: icon_path});
-  chrome.browserAction.setTitle({title: proxy_state});
+  chrome.browserAction.setTitle({title: title});
 }
 
 chrome.browserAction.onClicked.addListener(function(tab) {
-  updateUI(document.getElementById("pluginobj").toggleProxyState());
+  var plugin = document.getElementById("pluginobj");
+  updateUI(plugin.toggleProxyState(), plugin.connectionName);
 }); 
 chrome.tabs.onCreated.addListener(function(tab) {
-  updateUI(document.getElementById("pluginobj").getProxyState());
+  var plugin = document.getElementById("pluginobj");
+  updateUI(plugin.getProxyState(), plugin.connectionName);
 });
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-  updateUI(document.getElementById("pluginobj").getProxyState());
+  var plugin = document.getElementById("pluginobj");
+  updateUI(plugin.getProxyState(), plugin.connectionName);
 });
 
 </script>

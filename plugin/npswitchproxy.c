@@ -44,7 +44,9 @@ InternetSetOptionFunc pInternetSetOption;
 InternetGetConnectedStateExFunc pInternetGetConnectedStateEx;
 
 /* The global buffer to hold the current Internet connection name */
-wchar_t connection_name[1024];
+const int kMaxLengthOfConnectionName = 1024;
+wchar_t connection_name[kMaxLengthOfConnectionName];
+char utf8_connection_name[kMaxLengthOfConnectionName];
 
 typedef enum proxyState {
   Proxy_Unknown = 0,
@@ -116,17 +118,16 @@ void UnloadWinInetDll() {
 LPWSTR GetCurrentConnectionName() {  
   DWORD flags;
   if (pInternetGetConnectedStateEx(&flags,(LPTSTR)connection_name,
-                                   1024, NULL)) {
+                                   kMaxLengthOfConnectionName, NULL)) {
     if ((flags & INTERNET_CONNECTION_LAN) == 0) {
       DebugLog("npswitchproxy: Got non-Lan connection.\n");
       return (LPWSTR) connection_name;
     }
-  }
+  }  
   return NULL;
 }
   
-ProxyState GetWinInetProxyState() {
-  
+ProxyState GetWinInetProxyState() {  
   INTERNET_PER_CONN_OPTION options[1];
   options[0].dwOption = INTERNET_PER_CONN_FLAGS;
   INTERNET_PER_CONN_OPTION_LIST list;	
@@ -189,8 +190,13 @@ ProxyState ToggleWinInetProxyState() {
 
 #endif // WIN32
 
-static NPObject *so              = NULL;
-static NPNetscapeFuncs *npnfuncs = NULL;
+static NPObject* so              = NULL;
+static NPNetscapeFuncs* npnfuncs = NULL;
+static const char* kGetProxyStateMethod = "getProxyState";
+static const char* kToggleProxyStateMethod = "toggleProxyState";
+
+static const char* kGetConnectionNameProperty = "connectionName";
+
 
 /* NPN */
 
@@ -199,14 +205,14 @@ static bool HasMethod(NPObject* obj, NPIdentifier methodName) {
   return true;
 }
 
-static bool InvokeDefault(NPObject *obj, const NPVariant *args,
-                          uint32_t argCount, NPVariant *result) {
+static bool InvokeDefault(NPObject* obj, const NPVariant* args,
+                          uint32_t argCount, NPVariant* result) {
   DebugLog("npswitchproxy: InvokeDefault\n");	
   return true;
 }
 
-static bool InvokeGetProxyState(NPObject *obj, const NPVariant *args,
-                                uint32_t argCount, NPVariant *result) {
+static bool InvokeGetProxyState(NPObject* obj, const NPVariant* args,
+                                uint32_t argCount, NPVariant* result) {
   DebugLog("npswitchproxy: InvokeGetProxyState\n");
   ProxyState state = GetWinInetProxyState();
   result->type = NPVariantType_Int32;	
@@ -220,8 +226,8 @@ static bool InvokeGetProxyState(NPObject *obj, const NPVariant *args,
   return true;
 }
 
-static bool InvokeToggleProxyState(NPObject *obj, const NPVariant *args,
-                                   uint32_t argCount, NPVariant *result) {
+static bool InvokeToggleProxyState(NPObject* obj, const NPVariant* args,
+                                   uint32_t argCount, NPVariant* result) {
  DebugLog("npswitchproxy: InvokeToggleProxyState\n");
  ProxyState state = ToggleWinInetProxyState();
  result->type = NPVariantType_Int32;	
@@ -235,30 +241,72 @@ static bool InvokeToggleProxyState(NPObject *obj, const NPVariant *args,
  return true;
 }
 
+static bool GetConnectionName(NPObject* obj, NPVariant* result) {
+  DebugLog("npswitchproxy: GetConnectionName\n");
+  WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)connection_name,
+                      -1, utf8_connection_name, kMaxLengthOfConnectionName,
+                      NULL, NULL);
+  NPString str;
+  str.utf8characters = npnfuncs->utf8fromidentifier(
+    npnfuncs->getstringidentifier(utf8_connection_name));
+  str.utf8length = strlen(utf8_connection_name);
+  result->type = NPVariantType_String;
+  result->value.stringValue = str;  
+  return true;
+}
+
 static bool Invoke(NPObject* obj, NPIdentifier methodName,
-                   const NPVariant *args, uint32_t argCount, NPVariant *result) {
+                   const NPVariant* args, uint32_t argCount,
+                   NPVariant* result) {
  DebugLog("npswitchproxy: Invoke\n");
  char *name = npnfuncs->utf8fromidentifier(methodName);
- if(name && !strcmp((const char *)name, "getProxyState")) {
-   return InvokeGetProxyState(obj, args, argCount, result);
- } else if (name && !strcmp((const char *)name, "toggleProxyState")) {
-   return InvokeToggleProxyState(obj, args, argCount, result);
+ bool ret_val = false;
+ if(name && !strncmp((const char *)name, kGetProxyStateMethod,
+                     strlen(kGetProxyStateMethod))) {
+   ret_val = InvokeGetProxyState(obj, args, argCount, result);
+ } else if (name && !strncmp((const char *)name, kToggleProxyStateMethod,
+                             strlen(kToggleProxyStateMethod))) {
+   ret_val = InvokeToggleProxyState(obj, args, argCount, result);
  } else {
    // aim exception handling
    npnfuncs->setexception(obj, "exception during invocation");
    return false;
  }
+ if (name) {
+   npnfuncs->memfree(name);
+ }
+ return ret_val;
 }
 
-static bool HasProperty(NPObject *obj, NPIdentifier propertyName) {
+static bool HasProperty(NPObject* obj, NPIdentifier propertyName) {
   DebugLog("npswitchproxy: HasProperty\n");
-  return false;
+  char *name = npnfuncs->utf8fromidentifier(propertyName);
+  bool ret_val = false;
+  if (name && 
+    !strncmp((const char*)name, kGetConnectionNameProperty,
+             strlen(kGetConnectionNameProperty))) {
+    ret_val = true;
+  }
+
+  if (name) {
+    npnfuncs->memfree(name);
+  }
+  return ret_val;
 }
 
-static bool GetProperty(NPObject *obj, NPIdentifier propertyName,
+static bool GetProperty(NPObject* obj, NPIdentifier propertyName,
                         NPVariant *result) {
   DebugLog("npswitchproxy: GetProperty\n");
-  return false;
+  char *name = npnfuncs->utf8fromidentifier(propertyName);
+  bool ret_val = false;
+  if (name && !strncmp((const char*)name, kGetConnectionNameProperty,
+                       strlen(kGetConnectionNameProperty))) {    
+    ret_val = GetConnectionName(obj, result);
+  }
+  if (name) {
+    npnfuncs->memfree(name);
+  }
+  return ret_val;
 }
 
 static NPClass npcRefObject = {
@@ -278,13 +326,13 @@ static NPClass npcRefObject = {
 /* NPP */
 
 static NPError NewNPInstance(NPMIMEType pluginType, NPP instance,
-                             uint16 mode, int16 argc, char *argn[],
-                             char *argv[], NPSavedData *saved) {
+                             uint16 mode, int16 argc, char* argn[],
+                             char* argv[], NPSavedData* saved) {
   DebugLog("npswitchproxy: new\n");
   return NPERR_NO_ERROR;
 }
 
-static NPError DestroyNPInstance(NPP instance, NPSavedData **save) {
+static NPError DestroyNPInstance(NPP instance, NPSavedData** save) {
   if(so) {
     npnfuncs->releaseobject(so);
   }
@@ -293,7 +341,7 @@ static NPError DestroyNPInstance(NPP instance, NPSavedData **save) {
   return NPERR_NO_ERROR;
 }
 
-static NPError GetValue(NPP instance, NPPVariable variable, void *value) {
+static NPError GetValue(NPP instance, NPPVariable variable, void* value) {
   switch(variable) {
   default:
     DebugLog("npswitchproxy: GetValue - default\n");
@@ -324,7 +372,7 @@ static NPError GetValue(NPP instance, NPPVariable variable, void *value) {
 }
 
 /* expected by Safari on Darwin */
-static NPError HandleEvent(NPP instance, void *ev) {
+static NPError HandleEvent(NPP instance, void* ev) {
   DebugLog("npswitchproxy: HandleEvent\n");
   return NPERR_NO_ERROR;
 }
@@ -340,7 +388,7 @@ static NPError SetWindow(NPP instance, NPWindow* pNPWindow) {
 extern "C" {
 #endif
 
-  NPError OSCALL NP_GetEntryPoints(NPPluginFuncs *nppfuncs) {
+  NPError OSCALL NP_GetEntryPoints(NPPluginFuncs* nppfuncs) {
     DebugLog("npswitchproxy: NP_GetEntryPoints\n");
     nppfuncs->version = (NP_VERSION_MAJOR << 8) | NP_VERSION_MINOR;
     nppfuncs->newp = NewNPInstance;
@@ -355,7 +403,7 @@ extern "C" {
 #define HIBYTE(x) ((((uint32)(x)) & 0xff00) >> 8)
 #endif
 
-  NPError OSCALL NP_Initialize(NPNetscapeFuncs *npnf
+  NPError OSCALL NP_Initialize(NPNetscapeFuncs* npnf
 #if !defined(_WINDOWS) && !defined(WEBKIT_DARWIN_SDK)
     , NPPluginFuncs *nppfuncs) {
 #else
@@ -394,7 +442,7 @@ extern "C" {
   }
 
   /* needs to be present for WebKit based browsers */
-  NPError OSCALL NP_GetValue(void *npp, NPPVariable variable, void *value) {
+  NPError OSCALL NP_GetValue(void* npp, NPPVariable variable, void* value) {
     return GetValue((NPP)npp, variable, value);
   }
 
