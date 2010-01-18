@@ -16,12 +16,48 @@
 
 #include <stdio.h>
 #include <string.h>
-
 #include <npapi.h>
 #include <npupp.h>
 #include <npruntime.h>
+#ifdef WIN32
 #include <windows.h>
 #include <wininet.h>
+#endif
+
+static NPObject* so              = NULL;
+static NPNetscapeFuncs* npnfuncs = NULL;
+static const char* kGetProxyStateMethod = "getProxyState";
+static const char* kToggleProxyStateMethod = "toggleProxyState";
+static const char* kGetProxyConfigMethod = "getProxyConfig";
+static const char* kSetProxyConfigMethod = "setProxyConfig";
+static const char* kGetConnectionNameProperty = "connectionName";
+
+typedef enum proxyState {
+  Proxy_Unknown = 0,
+  Proxy_On,
+  Proxy_Off
+} ProxyState;
+
+typedef struct proxyConfig {
+  bool auto_detect;
+  char auto_config;
+  bool use_proxy;
+  char* auto_config_url;
+  char* proxy_server;
+  char* bypass_list;
+} ProxyConfig;
+
+static void DebugLog(const char* msg) {
+#ifdef DEBUG
+#ifndef _WINDOWS
+  fputs(msg, stderr);
+#else
+  FILE* out = fopen("\\npswitchproxy.log", "a");
+  fputs(msg, out);
+  fclose(out);
+#endif
+#endif
+}
 
 #ifdef WIN32
 typedef bool (__stdcall* InternetQueryOptionFunc) (
@@ -48,25 +84,17 @@ const int kMaxLengthOfConnectionName = 1024;
 wchar_t connection_name[kMaxLengthOfConnectionName];
 char utf8_connection_name[kMaxLengthOfConnectionName];
 
-typedef enum proxyState {
-  Proxy_Unknown = 0,
-  Proxy_On,
-  Proxy_Off
-} ProxyState;
-
-static void DebugLog(const char *msg) {
-#ifdef DEBUG
-#ifndef _WINDOWS
-  fputs(msg, stderr);
-#else
-  FILE *out = fopen("\\npswitchproxy.log", "a");
-  fputs(msg, out);
-  fclose(out);
-#endif
-#endif
+/* Convert the wide null-terminated string to utf8 null-terminated string.
+   Note that the return value should be freed after use.
+*/
+char* WStrToUtf8(LPCWSTR str) {
+  int bufferSize = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)str, -1, NULL, 0, NULL, NULL);
+	char* m = (char*)malloc(bufferSize);
+	WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)str, -1, m, bufferSize, NULL, NULL);
+	return m;
 }
 
-bool LoadWinInetDll() {
+static bool LoadWinInetDll() {
   hWinInetLib = LoadLibrary(TEXT("wininet.dll"));
   if (hWinInetLib == NULL) {
     return false;
@@ -109,16 +137,22 @@ bool LoadWinInetDll() {
   return true;
 }
 
-void UnloadWinInetDll() {
+static void UnloadWinInetDll() {
   if (hWinInetLib != NULL) {
     FreeLibrary(hWinInetLib);
   }
 }
 
-LPWSTR GetCurrentConnectionName() {  
-  DWORD flags;
+static LPWSTR GetCurrentConnectionName() {  
+  DWORD flags;  
+  memset(utf8_connection_name, 0, kMaxLengthOfConnectionName);
   if (pInternetGetConnectedStateEx(&flags,(LPTSTR)connection_name,
                                    kMaxLengthOfConnectionName, NULL)) {
+    WideCharToMultiByte(
+        CP_UTF8, 0, (LPCWSTR)connection_name,
+        -1, utf8_connection_name, kMaxLengthOfConnectionName,
+        NULL, NULL);
+
     if ((flags & INTERNET_CONNECTION_LAN) == 0) {
       DebugLog("npswitchproxy: Got non-Lan connection.\n");
       return (LPWSTR) connection_name;
@@ -127,7 +161,7 @@ LPWSTR GetCurrentConnectionName() {
   return NULL;
 }
   
-ProxyState GetWinInetProxyState() {  
+static ProxyState GetProxyState() {  
   INTERNET_PER_CONN_OPTION options[1];
   options[0].dwOption = INTERNET_PER_CONN_FLAGS;
   INTERNET_PER_CONN_OPTION_LIST list;	
@@ -152,7 +186,7 @@ ProxyState GetWinInetProxyState() {
   return Proxy_Unknown;
 }
 
-ProxyState ToggleWinInetProxyState() {
+static ProxyState ToggleProxyState() {
   INTERNET_PER_CONN_OPTION options[1];
   options[0].dwOption = INTERNET_PER_CONN_FLAGS;
   INTERNET_PER_CONN_OPTION_LIST list;	
@@ -188,15 +222,99 @@ ProxyState ToggleWinInetProxyState() {
   return Proxy_Unknown;
 }
 
-#endif // WIN32
+static bool GetProxyConfig(ProxyConfig* config) {
+  INTERNET_PER_CONN_OPTION options[] = {    
+    {INTERNET_PER_CONN_FLAGS, 0},
+    {INTERNET_PER_CONN_AUTOCONFIG_URL, 0},    
+    {INTERNET_PER_CONN_PROXY_SERVER, 0},
+    {INTERNET_PER_CONN_PROXY_BYPASS, 0},    
+  };
+  INTERNET_PER_CONN_OPTION_LIST list;     
+  unsigned long nSize = sizeof INTERNET_PER_CONN_OPTION_LIST;
 
-static NPObject* so              = NULL;
-static NPNetscapeFuncs* npnfuncs = NULL;
-static const char* kGetProxyStateMethod = "getProxyState";
-static const char* kToggleProxyStateMethod = "toggleProxyState";
+  list.dwSize = nSize;
+  list.pszConnection = GetCurrentConnectionName();
+  list.pOptions = options;
+  list.dwOptionCount = sizeof options / sizeof INTERNET_PER_CONN_OPTION;
+  list.dwOptionError = 0;
+  if (InternetQueryOption(
+	        NULL,
+	        INTERNET_OPTION_PER_CONNECTION_OPTION,
+	        &list,
+	        &nSize)) {
+    memset(config, 0, sizeof(ProxyConfig));
+    DWORD conn_flag = options[0].Value.dwValue;
+    config->auto_detect = (conn_flag & PROXY_TYPE_AUTO_DETECT) ==
+                          PROXY_TYPE_AUTO_DETECT;
+    config->auto_config = (conn_flag & PROXY_TYPE_AUTO_PROXY_URL) ==
+                          PROXY_TYPE_AUTO_PROXY_URL;
+    config->use_proxy = (conn_flag & PROXY_TYPE_PROXY) == PROXY_TYPE_PROXY;
 
-static const char* kGetConnectionNameProperty = "connectionName";
+    if (options[1].Value.pszValue != NULL) {
+      config->auto_config_url = WStrToUtf8(options[1].Value.pszValue);
+      GlobalFree(options[1].Value.pszValue);
+    }
+    if (options[2].Value.pszValue != NULL) {
+      config->proxy_server = WStrToUtf8(options[2].Value.pszValue);
+      GlobalFree(options[2].Value.pszValue);
+    }
+    if (options[3].Value.pszValue != NULL) {
+      config->bypass_list = WStrToUtf8(options[3].Value.pszValue);
+      GlobalFree(options[3].Value.pszValue);
+    }
+    DebugLog("npswitchproxy: InternetGetOption succeeded.\n");
+    return true;
+  }
+  DebugLog("npswitchproxy: InternetGetOption failed.\n");
+  return false;
+}
 
+/* Maintain C style instead of C++. 
+   Otherwise use const ProxyConfig& config. */
+static bool SetProxyConfig(const ProxyConfig* config) {
+  INTERNET_PER_CONN_OPTION options[] = {    
+    {INTERNET_PER_CONN_FLAGS, 0},
+    {INTERNET_PER_CONN_AUTOCONFIG_URL, 0},    
+    {INTERNET_PER_CONN_PROXY_SERVER, 0},
+    {INTERNET_PER_CONN_PROXY_BYPASS, 0},    
+  };
+  INTERNET_PER_CONN_OPTION_LIST list;     
+  unsigned long nSize = sizeof INTERNET_PER_CONN_OPTION_LIST;
+
+  list.dwSize = nSize;
+  list.pszConnection = GetCurrentConnectionName();
+  list.pOptions = options;
+  list.dwOptionCount = sizeof options / sizeof INTERNET_PER_CONN_OPTION;
+  list.dwOptionError = 0;
+  options[0].Value.dwValue = PROXY_TYPE_DIRECT;
+  if (config->auto_config) {
+    options[0].Value.dwValue |= PROXY_TYPE_AUTO_PROXY_URL;
+  }
+  if (config->auto_detect) {
+    options[0].Value.dwValue |= PROXY_TYPE_AUTO_DETECT;
+  }
+  if (config->use_proxy) {
+    options[0].Value.dwValue |= PROXY_TYPE_PROXY;
+  }
+  if (config->auto_config_url != NULL) {
+    options[1].Value.pszValue = (LPWSTR) config->auto_config_url;
+  }
+  if (config->proxy_server != NULL) {
+    options[2].Value.pszValue = (LPWSTR) config->proxy_server;
+  }
+  if (config->bypass_list != NULL) {
+    options[3].Value.pszValue = (LPWSTR) config->bypass_list;
+  }
+  if (InternetSetOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION,
+                        &list, nSize)) {
+    DebugLog("npswitchproxy: InternetSetOption succeeded.\n");
+    return true;
+  }
+  DebugLog("npswitchproxy: InternetSetOption failed.\n");
+  return false;
+}
+
+#endif /* WIN32 */
 
 /* NPN */
 
@@ -214,7 +332,7 @@ static bool InvokeDefault(NPObject* obj, const NPVariant* args,
 static bool InvokeGetProxyState(NPObject* obj, const NPVariant* args,
                                 uint32_t argCount, NPVariant* result) {
   DebugLog("npswitchproxy: InvokeGetProxyState\n");
-  ProxyState state = GetWinInetProxyState();
+  ProxyState state = GetProxyState();
   result->type = NPVariantType_Int32;	
   if (state == Proxy_On) {
     result->value.intValue = 1;
@@ -229,7 +347,7 @@ static bool InvokeGetProxyState(NPObject* obj, const NPVariant* args,
 static bool InvokeToggleProxyState(NPObject* obj, const NPVariant* args,
                                    uint32_t argCount, NPVariant* result) {
  DebugLog("npswitchproxy: InvokeToggleProxyState\n");
- ProxyState state = ToggleWinInetProxyState();
+ ProxyState state = ToggleProxyState();
  result->type = NPVariantType_Int32;	
  if (state == Proxy_On) {
    result->value.intValue = 1;
@@ -241,12 +359,20 @@ static bool InvokeToggleProxyState(NPObject* obj, const NPVariant* args,
  return true;
 }
 
+static bool InvokeGetProxyConfig(NPObject* obj, const NPVariant* args,
+                                 uint32_t argCount, NPVariant* result) {  
+  return true;
+}
+
+static bool InvokeSetProxyConfig(NPObject* obj, const NPVariant* args,
+                                 uint32_t argCount, NPVariant* result) {
+  return true;
+}
+
 static bool GetConnectionName(NPObject* obj, NPVariant* result) {
-  DebugLog("npswitchproxy: GetConnectionName\n");
-  WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)connection_name,
-                      -1, utf8_connection_name, kMaxLengthOfConnectionName,
-                      NULL, NULL);
+  DebugLog("npswitchproxy: GetConnectionName\n");  
   NPString str;
+  GetCurrentConnectionName();
   str.utf8characters = npnfuncs->utf8fromidentifier(
     npnfuncs->getstringidentifier(utf8_connection_name));
   str.utf8length = strlen(utf8_connection_name);
@@ -259,16 +385,25 @@ static bool Invoke(NPObject* obj, NPIdentifier methodName,
                    const NPVariant* args, uint32_t argCount,
                    NPVariant* result) {
  DebugLog("npswitchproxy: Invoke\n");
- char *name = npnfuncs->utf8fromidentifier(methodName);
+ char* name = npnfuncs->utf8fromidentifier(methodName);
  bool ret_val = false;
- if(name && !strncmp((const char *)name, kGetProxyStateMethod,
-                     strlen(kGetProxyStateMethod))) {
+ if (!name) {
+   return false;
+ }
+ if(!strncmp((const char*)name, kGetProxyStateMethod,
+             strlen(kGetProxyStateMethod))) {
    ret_val = InvokeGetProxyState(obj, args, argCount, result);
- } else if (name && !strncmp((const char *)name, kToggleProxyStateMethod,
-                             strlen(kToggleProxyStateMethod))) {
+ } else if (!strncmp((const char*)name, kToggleProxyStateMethod,
+                     strlen(kToggleProxyStateMethod))) {
    ret_val = InvokeToggleProxyState(obj, args, argCount, result);
+ } else if (!strncmp((const char*)name, kGetProxyConfigMethod,
+                     strlen(kGetProxyConfigMethod))) {
+   ret_val = InvokeGetProxyConfig(obj, args, argCount, result);
+ } else if (!strncmp((const char*)name, kSetProxyConfigMethod,
+                     strlen(kSetProxyConfigMethod))) {
+   ret_val = InvokeSetProxyConfig(obj, args, argCount, result);
  } else {
-   // aim exception handling
+   /* Aim exception handling */
    npnfuncs->setexception(obj, "exception during invocation");
    return false;
  }
@@ -280,11 +415,11 @@ static bool Invoke(NPObject* obj, NPIdentifier methodName,
 
 static bool HasProperty(NPObject* obj, NPIdentifier propertyName) {
   DebugLog("npswitchproxy: HasProperty\n");
-  char *name = npnfuncs->utf8fromidentifier(propertyName);
+  char* name = npnfuncs->utf8fromidentifier(propertyName);
   bool ret_val = false;
   if (name && 
-    !strncmp((const char*)name, kGetConnectionNameProperty,
-             strlen(kGetConnectionNameProperty))) {
+      !strncmp((const char*)name, kGetConnectionNameProperty,
+               strlen(kGetConnectionNameProperty))) {
     ret_val = true;
   }
 
@@ -295,9 +430,9 @@ static bool HasProperty(NPObject* obj, NPIdentifier propertyName) {
 }
 
 static bool GetProperty(NPObject* obj, NPIdentifier propertyName,
-                        NPVariant *result) {
+                        NPVariant* result) {
   DebugLog("npswitchproxy: GetProperty\n");
-  char *name = npnfuncs->utf8fromidentifier(propertyName);
+  char* name = npnfuncs->utf8fromidentifier(propertyName);
   bool ret_val = false;
   if (name && !strncmp((const char*)name, kGetConnectionNameProperty,
                        strlen(kGetConnectionNameProperty))) {    
