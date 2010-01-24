@@ -288,17 +288,37 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath=".\proxy_config.cc"
+				>
+			</File>
+			<File
+				RelativePath=".\win\winproxy.cc"
+				>
+			</File>
 			<Filter
 				Name="Header Files"
 				Filter="h;hpp;hxx;hm;inl;inc;xsd"
 				UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 				>
 				<File
+					RelativePath=".\npswitchproxy.h"
+					>
+				</File>
+				<File
+					RelativePath=".\proxy_config.h"
+					>
+				</File>
+				<File
 					RelativePath=".\resource.h"
 					>
 				</File>
 				<File
 					RelativePath=".\stdint.h"
+					>
+				</File>
+				<File
+					RelativePath=".\win\winproxy.h"
 					>
 				</File>
 			</Filter>

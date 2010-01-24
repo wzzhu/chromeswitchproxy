@@ -14,40 +14,29 @@
 * License.
 * ***** END LICENSE BLOCK ***** */
 
+#include "npswitchproxy.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <npapi.h>
 #include <npupp.h>
 #include <npruntime.h>
+
+#include "proxy_config.h"
 #ifdef WIN32
-#include <windows.h>
-#include <wininet.h>
+#include "win/winproxy.h"
 #endif
 
-static NPObject* so              = NULL;
-static NPNetscapeFuncs* npnfuncs = NULL;
-static const char* kGetProxyStateMethod = "getProxyState";
-static const char* kToggleProxyStateMethod = "toggleProxyState";
-static const char* kGetProxyConfigMethod = "getProxyConfig";
-static const char* kSetProxyConfigMethod = "setProxyConfig";
-static const char* kGetConnectionNameProperty = "connectionName";
+static NPObject* so = NULL;
+NPNetscapeFuncs* npnfuncs = NULL;
 
-typedef enum proxyState {
-  Proxy_Unknown = 0,
-  Proxy_On,
-  Proxy_Off
-} ProxyState;
+const char* kGetProxyStateMethod = "getProxyState";
+const char* kToggleProxyStateMethod = "toggleProxyState";
+const char* kGetProxyConfigMethod = "getProxyConfig";
+const char* kSetProxyConfigMethod = "setProxyConfig";
+const char* kGetConnectionNameProperty = "connectionName";
 
-typedef struct proxyConfig {
-  bool auto_detect;
-  char auto_config;
-  bool use_proxy;
-  char* auto_config_url;
-  char* proxy_server;
-  char* bypass_list;
-} ProxyConfig;
-
-static void DebugLog(const char* msg) {
+void DebugLog(const char* msg) {
 #ifdef DEBUG
 #ifndef _WINDOWS
   fputs(msg, stderr);
@@ -59,275 +48,7 @@ static void DebugLog(const char* msg) {
 #endif
 }
 
-#ifdef WIN32
-typedef bool (__stdcall* InternetQueryOptionFunc) (
-  HINTERNET hInternet, DWORD dwOption,
-  LPVOID lpBuffer, LPDWORD lpdwBufferLength);
-
-typedef bool (__stdcall* InternetSetOptionFunc) (
-  HINTERNET hInternet, DWORD dwOption,
-  LPVOID lpBuffer, DWORD dwBufferLength);
-
-typedef bool (__stdcall* InternetGetConnectedStateExFunc) (
-              LPDWORD lpdwFlags,
-              LPTSTR lpszConnectionName,
-              DWORD dwNameLen,
-              DWORD dwReserved);
-
-HINSTANCE hWinInetLib;
-InternetQueryOptionFunc pInternetQueryOption;
-InternetSetOptionFunc pInternetSetOption;
-InternetGetConnectedStateExFunc pInternetGetConnectedStateEx;
-
-/* The global buffer to hold the current Internet connection name */
-const int kMaxLengthOfConnectionName = 1024;
-wchar_t connection_name[kMaxLengthOfConnectionName];
-char utf8_connection_name[kMaxLengthOfConnectionName];
-
-/* Convert the wide null-terminated string to utf8 null-terminated string.
-   Note that the return value should be freed after use.
-*/
-char* WStrToUtf8(LPCWSTR str) {
-  int bufferSize = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)str, -1, NULL, 0, NULL, NULL);
-	char* m = (char*)malloc(bufferSize);
-	WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)str, -1, m, bufferSize, NULL, NULL);
-	return m;
-}
-
-static bool LoadWinInetDll() {
-  hWinInetLib = LoadLibrary(TEXT("wininet.dll"));
-  if (hWinInetLib == NULL) {
-    return false;
-  }
-  pInternetQueryOption = (InternetQueryOptionFunc)GetProcAddress(
-    HMODULE(hWinInetLib), "InternetQueryOptionW");
-  if (pInternetQueryOption == NULL) {
-    pInternetQueryOption = (InternetQueryOptionFunc)GetProcAddress(
-      HMODULE(hWinInetLib), "InternetQueryOptionA");
-  }
-  if (pInternetQueryOption == NULL) {
-    FreeLibrary(hWinInetLib);
-    return false;
-  }
-  pInternetSetOption = (InternetSetOptionFunc)GetProcAddress(
-    HMODULE(hWinInetLib), "InternetSetOptionW");
-
-  if (pInternetSetOption == NULL) {
-    pInternetSetOption = (InternetSetOptionFunc)GetProcAddress(
-      HMODULE(hWinInetLib), "InternetSetOptionA");
-  }
-  if (pInternetSetOption == NULL) {
-    FreeLibrary(hWinInetLib);
-    return false;
-  }
-
-  if (pInternetGetConnectedStateEx == NULL) {
-    pInternetGetConnectedStateEx =
-      (InternetGetConnectedStateExFunc)GetProcAddress(
-      HMODULE(hWinInetLib), "InternetGetConnectedStateExW");
-  }
-  if (pInternetGetConnectedStateEx == NULL) {
-    pInternetGetConnectedStateEx = (InternetGetConnectedStateExFunc)GetProcAddress(
-      HMODULE(hWinInetLib), "InternetGetConnectedStateExA");
-  }
-  if (pInternetGetConnectedStateEx == NULL) {
-    FreeLibrary(hWinInetLib);
-    return false;
-  }
-  return true;
-}
-
-static void UnloadWinInetDll() {
-  if (hWinInetLib != NULL) {
-    FreeLibrary(hWinInetLib);
-  }
-}
-
-static LPWSTR GetCurrentConnectionName() {  
-  DWORD flags;  
-  memset(utf8_connection_name, 0, kMaxLengthOfConnectionName);
-  if (pInternetGetConnectedStateEx(&flags,(LPTSTR)connection_name,
-                                   kMaxLengthOfConnectionName, NULL)) {
-    WideCharToMultiByte(
-        CP_UTF8, 0, (LPCWSTR)connection_name,
-        -1, utf8_connection_name, kMaxLengthOfConnectionName,
-        NULL, NULL);
-
-    if ((flags & INTERNET_CONNECTION_LAN) == 0) {
-      DebugLog("npswitchproxy: Got non-Lan connection.\n");
-      return (LPWSTR) connection_name;
-    }
-  }  
-  return NULL;
-}
-  
-static ProxyState GetProxyState() {  
-  INTERNET_PER_CONN_OPTION options[1];
-  options[0].dwOption = INTERNET_PER_CONN_FLAGS;
-  INTERNET_PER_CONN_OPTION_LIST list;	
-  unsigned long nSize = sizeof(INTERNET_PER_CONN_OPTION_LIST);   
-  list.dwSize = nSize;  
-  list.pszConnection = GetCurrentConnectionName();  
-  list.pOptions = options;
-  list.dwOptionCount = 1;
-  list.dwOptionError = 0;	
-  if (pInternetQueryOption(
-    NULL,
-    INTERNET_OPTION_PER_CONNECTION_OPTION,
-    &list,
-    &nSize)) {
-      DWORD proxyState = options[0].Value.dwValue;		
-      if (proxyState & PROXY_TYPE_PROXY) {
-        return Proxy_On;
-      } else {
-        return Proxy_Off;
-      }
-  }
-  return Proxy_Unknown;
-}
-
-static ProxyState ToggleProxyState() {
-  INTERNET_PER_CONN_OPTION options[1];
-  options[0].dwOption = INTERNET_PER_CONN_FLAGS;
-  INTERNET_PER_CONN_OPTION_LIST list;	
-  unsigned long nSize = sizeof(INTERNET_PER_CONN_OPTION_LIST);	
-  list.dwSize = nSize;
-  list.pszConnection = GetCurrentConnectionName();
-  list.pOptions = options;
-  list.dwOptionCount = 1;
-  list.dwOptionError = 0;	
-  if (pInternetQueryOption(
-    NULL,
-    INTERNET_OPTION_PER_CONNECTION_OPTION,
-    &list,
-    &nSize)) {
-      DWORD dwProxyState = options[0].Value.dwValue;
-      ProxyState state;
-      if (dwProxyState & PROXY_TYPE_PROXY) {
-        dwProxyState &= ~PROXY_TYPE_PROXY;
-        state = Proxy_Off;
-      } else {
-        dwProxyState |= PROXY_TYPE_PROXY;
-        state = Proxy_On;
-      }
-      options[0].Value.dwValue = dwProxyState;
-      if (pInternetSetOption(
-        NULL,
-        INTERNET_OPTION_PER_CONNECTION_OPTION,
-        &list,
-        nSize)) {
-          return state;
-      }
-  }
-  return Proxy_Unknown;
-}
-
-static bool GetProxyConfig(ProxyConfig* config) {
-  INTERNET_PER_CONN_OPTION options[] = {    
-    {INTERNET_PER_CONN_FLAGS, 0},
-    {INTERNET_PER_CONN_AUTOCONFIG_URL, 0},    
-    {INTERNET_PER_CONN_PROXY_SERVER, 0},
-    {INTERNET_PER_CONN_PROXY_BYPASS, 0},    
-  };
-  INTERNET_PER_CONN_OPTION_LIST list;     
-  unsigned long nSize = sizeof INTERNET_PER_CONN_OPTION_LIST;
-
-  list.dwSize = nSize;
-  list.pszConnection = GetCurrentConnectionName();
-  list.pOptions = options;
-  list.dwOptionCount = sizeof options / sizeof INTERNET_PER_CONN_OPTION;
-  list.dwOptionError = 0;
-  if (InternetQueryOption(
-	        NULL,
-	        INTERNET_OPTION_PER_CONNECTION_OPTION,
-	        &list,
-	        &nSize)) {
-    memset(config, 0, sizeof(ProxyConfig));
-    DWORD conn_flag = options[0].Value.dwValue;
-    config->auto_detect = (conn_flag & PROXY_TYPE_AUTO_DETECT) ==
-                          PROXY_TYPE_AUTO_DETECT;
-    config->auto_config = (conn_flag & PROXY_TYPE_AUTO_PROXY_URL) ==
-                          PROXY_TYPE_AUTO_PROXY_URL;
-    config->use_proxy = (conn_flag & PROXY_TYPE_PROXY) == PROXY_TYPE_PROXY;
-
-    if (options[1].Value.pszValue != NULL) {
-      config->auto_config_url = WStrToUtf8(options[1].Value.pszValue);
-      GlobalFree(options[1].Value.pszValue);
-    }
-    if (options[2].Value.pszValue != NULL) {
-      config->proxy_server = WStrToUtf8(options[2].Value.pszValue);
-      GlobalFree(options[2].Value.pszValue);
-    }
-    if (options[3].Value.pszValue != NULL) {
-      config->bypass_list = WStrToUtf8(options[3].Value.pszValue);
-      GlobalFree(options[3].Value.pszValue);
-    }
-    DebugLog("npswitchproxy: InternetGetOption succeeded.\n");
-    return true;
-  }
-  DebugLog("npswitchproxy: InternetGetOption failed.\n");
-  return false;
-}
-
-/* Maintain C style instead of C++. 
-   Otherwise use const ProxyConfig& config. */
-static bool SetProxyConfig(const ProxyConfig* config) {
-  INTERNET_PER_CONN_OPTION options[] = {    
-    {INTERNET_PER_CONN_FLAGS, 0},
-    {INTERNET_PER_CONN_AUTOCONFIG_URL, 0},    
-    {INTERNET_PER_CONN_PROXY_SERVER, 0},
-    {INTERNET_PER_CONN_PROXY_BYPASS, 0},    
-  };
-  INTERNET_PER_CONN_OPTION_LIST list;     
-  unsigned long nSize = sizeof INTERNET_PER_CONN_OPTION_LIST;
-
-  list.dwSize = nSize;
-  list.pszConnection = GetCurrentConnectionName();
-  list.pOptions = options;
-  list.dwOptionCount = sizeof options / sizeof INTERNET_PER_CONN_OPTION;
-  list.dwOptionError = 0;
-  options[0].Value.dwValue = PROXY_TYPE_DIRECT;
-  if (config->auto_config) {
-    options[0].Value.dwValue |= PROXY_TYPE_AUTO_PROXY_URL;
-  }
-  if (config->auto_detect) {
-    options[0].Value.dwValue |= PROXY_TYPE_AUTO_DETECT;
-  }
-  if (config->use_proxy) {
-    options[0].Value.dwValue |= PROXY_TYPE_PROXY;
-  }
-  if (config->auto_config_url != NULL) {
-    options[1].Value.pszValue = (LPWSTR) config->auto_config_url;
-  }
-  if (config->proxy_server != NULL) {
-    options[2].Value.pszValue = (LPWSTR) config->proxy_server;
-  }
-  if (config->bypass_list != NULL) {
-    options[3].Value.pszValue = (LPWSTR) config->bypass_list;
-  }
-  if (InternetSetOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION,
-                        &list, nSize)) {
-    DebugLog("npswitchproxy: InternetSetOption succeeded.\n");
-    return true;
-  }
-  DebugLog("npswitchproxy: InternetSetOption failed.\n");
-  return false;
-}
-
-#endif /* WIN32 */
-
-/* NPN */
-
-static bool HasMethod(NPObject* obj, NPIdentifier methodName) {
-  DebugLog("npswitchproxy: HasMethod\n");
-  return true;
-}
-
-static bool InvokeDefault(NPObject* obj, const NPVariant* args,
-                          uint32_t argCount, NPVariant* result) {
-  DebugLog("npswitchproxy: InvokeDefault\n");	
-  return true;
-}
+// Begin the implementation of scriptable plugin NPObject.
 
 static bool InvokeGetProxyState(NPObject* obj, const NPVariant* args,
                                 uint32_t argCount, NPVariant* result) {
@@ -361,23 +82,102 @@ static bool InvokeToggleProxyState(NPObject* obj, const NPVariant* args,
 
 static bool InvokeGetProxyConfig(NPObject* obj, const NPVariant* args,
                                  uint32_t argCount, NPVariant* result) {  
+  PluginObj* plugin = (PluginObj*)obj;
+  ProxyConfigObj* proxy = CreateProxyConfigObj(plugin->npp);
+  if (!GetProxyConfig(&proxy->config)) {
+    return false;
+  }
+  OBJECT_TO_NPVARIANT((NPObject*)proxy, *result);
   return true;
 }
 
+// We accept calls using the following forms:
+// plugin.SetProxyConfig();  No proxy
+// plugin.SetProxyConfig(use_proxy, proxy_server);
+// plugin.SetProxyConfig(use_proxy, proxy_server, bypass_list);
+// plugin.SetProxyConfig(use_proxy, proxy_server, bypass_list, auto_detect);
+// plugin.SetProxyConfig(use_proxy, proxy_server, bypass_list, auto_detect,
+// auto_config, auto_config_url);
 static bool InvokeSetProxyConfig(NPObject* obj, const NPVariant* args,
                                  uint32_t argCount, NPVariant* result) {
-  return true;
+  ProxyConfig config;
+  NPString str[3];
+  if (!GetProxyConfig(&config)) {
+    return false;
+  }
+  if (argCount == 0) {
+    config.use_proxy = false;
+  } else if (argCount == 2 &&
+             NPVARIANT_IS_BOOLEAN(args[0]) &&
+             NPVARIANT_IS_STRING(args[1])) {
+    config.use_proxy = NPVARIANT_TO_BOOLEAN(args[0]);
+    str[0] = NPVARIANT_TO_STRING(args[1]);
+    config.proxy_server = str[0].utf8characters;
+  } else if (argCount == 3 &&
+             NPVARIANT_IS_BOOLEAN(args[0]) &&
+             NPVARIANT_IS_STRING(args[1]) &&
+             NPVARIANT_IS_STRING(args[2])) {
+    config.use_proxy = NPVARIANT_TO_BOOLEAN(args[0]);
+    str[0] = NPVARIANT_TO_STRING(args[1]);
+    config.proxy_server = str[0].utf8characters;
+    str[1] = NPVARIANT_TO_STRING(args[2]);
+    config.bypass_list = str[1].utf8characters;
+  } else if (argCount == 4 &&
+             NPVARIANT_IS_BOOLEAN(args[0]) &&
+             NPVARIANT_IS_STRING(args[1]) &&
+             NPVARIANT_IS_STRING(args[2]) &&
+             NPVARIANT_IS_BOOLEAN(args[3])) {
+    config.use_proxy = NPVARIANT_TO_BOOLEAN(args[0]);
+    str[0] = NPVARIANT_TO_STRING(args[1]);
+    config.proxy_server = str[0].utf8characters;
+    str[1] = NPVARIANT_TO_STRING(args[2]);
+    config.bypass_list = str[1].utf8characters;
+    config.auto_detect = NPVARIANT_TO_BOOLEAN(args[3]);
+  } else if (argCount == 6 &&
+             NPVARIANT_IS_BOOLEAN(args[0]) &&
+             NPVARIANT_IS_STRING(args[1]) &&
+             NPVARIANT_IS_STRING(args[2]) &&
+             NPVARIANT_IS_BOOLEAN(args[3]) &&
+             NPVARIANT_IS_BOOLEAN(args[4]) &&
+             NPVARIANT_IS_STRING(args[5])) {
+    config.use_proxy = NPVARIANT_TO_BOOLEAN(args[0]);
+    str[0] = NPVARIANT_TO_STRING(args[1]);
+    config.proxy_server = str[0].utf8characters;
+    str[1] = NPVARIANT_TO_STRING(args[2]);
+    config.bypass_list = str[1].utf8characters;
+    config.auto_detect = NPVARIANT_TO_BOOLEAN(args[3]);
+    config.auto_config = NPVARIANT_TO_BOOLEAN(args[4]);
+    str[2] = NPVARIANT_TO_STRING(args[5]);
+    config.auto_config_url = str[2].utf8characters;
+  }
+  return SetProxyConfig(config);
 }
 
 static bool GetConnectionName(NPObject* obj, NPVariant* result) {
   DebugLog("npswitchproxy: GetConnectionName\n");  
-  NPString str;
   GetCurrentConnectionName();
-  str.utf8characters = npnfuncs->utf8fromidentifier(
-    npnfuncs->getstringidentifier(utf8_connection_name));
-  str.utf8length = strlen(utf8_connection_name);
-  result->type = NPVariantType_String;
-  result->value.stringValue = str;  
+  char* utf8_name = npnfuncs->utf8fromidentifier(
+      npnfuncs->getstringidentifier(utf8_connection_name));
+  STRINGZ_TO_NPVARIANT(utf8_name, *result);
+  return true;
+}
+
+static NPObject* Allocate(NPP instance, NPClass* npclass) {
+  return (NPObject*)new PluginObj;
+}
+
+static void Deallocate(NPObject* obj) {
+  delete((PluginObj*) obj);
+}
+
+static bool HasMethod(NPObject* obj, NPIdentifier methodName) {
+  DebugLog("npswitchproxy: HasMethod\n");
+  return true;
+}
+
+static bool InvokeDefault(NPObject* obj, const NPVariant* args,
+                          uint32_t argCount, NPVariant* result) {
+  DebugLog("npswitchproxy: InvokeDefault\n");	
   return true;
 }
 
@@ -403,7 +203,7 @@ static bool Invoke(NPObject* obj, NPIdentifier methodName,
                      strlen(kSetProxyConfigMethod))) {
    ret_val = InvokeSetProxyConfig(obj, args, argCount, result);
  } else {
-   /* Aim exception handling */
+   // Aim exception handling. 
    npnfuncs->setexception(obj, "exception during invocation");
    return false;
  }
@@ -417,9 +217,8 @@ static bool HasProperty(NPObject* obj, NPIdentifier propertyName) {
   DebugLog("npswitchproxy: HasProperty\n");
   char* name = npnfuncs->utf8fromidentifier(propertyName);
   bool ret_val = false;
-  if (name && 
-      !strncmp((const char*)name, kGetConnectionNameProperty,
-               strlen(kGetConnectionNameProperty))) {
+  if (name && !strncmp((const char*)name, kGetConnectionNameProperty,
+                       strlen(kGetConnectionNameProperty))) {
     ret_val = true;
   }
 
@@ -444,10 +243,10 @@ static bool GetProperty(NPObject* obj, NPIdentifier propertyName,
   return ret_val;
 }
 
-static NPClass npcRefObject = {
+static NPClass plugin_ref_obj = {
   NP_CLASS_STRUCT_VERSION,
-  NULL,
-  NULL,
+  Allocate,
+  Deallocate,
   NULL,
   HasMethod,
   Invoke,
@@ -457,8 +256,6 @@ static NPClass npcRefObject = {
   NULL,
   NULL,
 };
-
-/* NPP */
 
 static NPError NewNPInstance(NPMIMEType pluginType, NPP instance,
                              uint16 mode, int16 argc, char* argn[],
@@ -491,8 +288,11 @@ static NPError GetValue(NPP instance, NPPVariable variable, void* value) {
     break;
   case NPPVpluginScriptableNPObject:
     DebugLog("npswitchproxy: GetValue - scriptable object\n");
-    if(!so)
-      so = npnfuncs->createobject(instance, &npcRefObject);
+    if(!so) {
+      so = npnfuncs->createobject(instance, &plugin_ref_obj);
+    }
+    // Retain the object since we keep it in plugin code
+    // so that it won't be freed by browser.
     npnfuncs->retainobject(so);
     *(NPObject **)value = so;
     break;
@@ -505,81 +305,81 @@ static NPError GetValue(NPP instance, NPPVariable variable, void* value) {
   }
   return NPERR_NO_ERROR;
 }
+// End of the implementation of scriptable plugin NPObject.
 
-/* expected by Safari on Darwin */
+// Expected by Safari on Darwin.
 static NPError HandleEvent(NPP instance, void* ev) {
   DebugLog("npswitchproxy: HandleEvent\n");
   return NPERR_NO_ERROR;
 }
 
-/* expected by Opera */
+// Expected by Opera.
 static NPError SetWindow(NPP instance, NPWindow* pNPWindow) {
   DebugLog("npswitchproxy: SetWindow\n");
   return NPERR_NO_ERROR;
 }
 
-/* EXPORT */
+// EXPORT
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-  NPError OSCALL NP_GetEntryPoints(NPPluginFuncs* nppfuncs) {
-    DebugLog("npswitchproxy: NP_GetEntryPoints\n");
-    nppfuncs->version = (NP_VERSION_MAJOR << 8) | NP_VERSION_MINOR;
-    nppfuncs->newp = NewNPInstance;
-    nppfuncs->destroy = DestroyNPInstance;
-    nppfuncs->getvalue = GetValue;
-    nppfuncs->event = HandleEvent;
-    nppfuncs->setwindow = SetWindow;
-    return NPERR_NO_ERROR;
-  }
+NPError OSCALL NP_GetEntryPoints(NPPluginFuncs* nppfuncs) {
+  DebugLog("npswitchproxy: NP_GetEntryPoints\n");
+  nppfuncs->version = (NP_VERSION_MAJOR << 8) | NP_VERSION_MINOR;
+  nppfuncs->newp = NewNPInstance;
+  nppfuncs->destroy = DestroyNPInstance;
+  nppfuncs->getvalue = GetValue;
+  nppfuncs->event = HandleEvent;
+  nppfuncs->setwindow = SetWindow;
+  return NPERR_NO_ERROR;
+}
 
 #ifndef HIBYTE
 #define HIBYTE(x) ((((uint32)(x)) & 0xff00) >> 8)
 #endif
 
-  NPError OSCALL NP_Initialize(NPNetscapeFuncs* npnf
+NPError OSCALL NP_Initialize(NPNetscapeFuncs* npnf
 #if !defined(_WINDOWS) && !defined(WEBKIT_DARWIN_SDK)
-    , NPPluginFuncs *nppfuncs) {
+                             , NPPluginFuncs *nppfuncs) {
 #else
-    ) {
-#endif	
-      DebugLog("npswitchproxy: NP_Initialize\n");
-      if(npnf == NULL) {
-        return NPERR_INVALID_FUNCTABLE_ERROR;
-      }
-      if(HIBYTE(npnf->version) > NP_VERSION_MAJOR) {
-        return NPERR_INCOMPATIBLE_VERSION_ERROR;
-      }
-      npnfuncs = npnf;
+  ) {
+#endif
+    DebugLog("npswitchproxy: NP_Initialize\n");
+    if(npnf == NULL) {
+      return NPERR_INVALID_FUNCTABLE_ERROR;
+    }
+    if(HIBYTE(npnf->version) > NP_VERSION_MAJOR) {
+      return NPERR_INCOMPATIBLE_VERSION_ERROR;
+    }
+    npnfuncs = npnf;
 #if !defined(_WINDOWS) && !defined(WEBKIT_DARWIN_SDK)
-      NP_GetEntryPoints(nppfuncs);
+    NP_GetEntryPoints(nppfuncs);
 #endif
 #ifdef WIN32
-      if (!LoadWinInetDll()) {
-        return NPERR_MODULE_LOAD_FAILED_ERROR;
-      }
-#endif
-      return NPERR_NO_ERROR;
-  }
-
-  NPError	OSCALL NP_Shutdown() {
-    DebugLog("npswitchproxy: NP_Shutdown\n");
-#ifdef WIN32
-    UnloadWinInetDll();
+    if (!LoadWinInetDll()) {
+      return NPERR_MODULE_LOAD_FAILED_ERROR;
+    }
 #endif
     return NPERR_NO_ERROR;
-  }
+}
 
-  char* NP_GetMIMEDescription(void) {
-    DebugLog("npswitchproxy: NP_GetMIMEDescription\n");
-    return "application/x-switch-wininet-proxy::wzzhu@cs.hku.hk";
-  }
+NPError	OSCALL NP_Shutdown() {
+  DebugLog("npswitchproxy: NP_Shutdown\n");
+#ifdef WIN32
+  UnloadWinInetDll();
+#endif
+  return NPERR_NO_ERROR;
+}
 
-  /* needs to be present for WebKit based browsers */
-  NPError OSCALL NP_GetValue(void* npp, NPPVariable variable, void* value) {
-    return GetValue((NPP)npp, variable, value);
-  }
+char* NP_GetMIMEDescription(void) {
+  DebugLog("npswitchproxy: NP_GetMIMEDescription\n");
+  return "application/x-switch-wininet-proxy::wzzhu@cs.hku.hk";
+}
+
+// Needs to be present for WebKit based browsers.
+NPError OSCALL NP_GetValue(void* npp, NPPVariable variable, void* value) {
+  return GetValue((NPP)npp, variable, value);
+}
 
 #ifdef __cplusplus
 }
