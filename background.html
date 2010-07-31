@@ -11,16 +11,16 @@ function updateUI() {
   var name = plugin.connectionName;
   var title;
   if (!hasConnection(plugin)) {
-    title = "No active connections found. Please check your network.";
+    title = chrome.i18n.getMessage("noConnection");
 	icon_path = "no_connection.png";
   } else {
     var config = plugin.getProxyConfig(); 
-    var proxy_state = "Proxy is off";
+    var proxy_state = chrome.i18n.getMessage("noProxy");
     if (config.useProxy) {
       icon_path = "proxy_on.png";
-      proxy_state = "proxy=" + config.proxyServer;
+      proxy_state = chrome.i18n.getMessage("proxyIs") + config.proxyServer;
 	  if (should_show_popup) {
-	    proxy_state += ". Click to edit the proxy inplace.";
+	    proxy_state += chrome.i18n.getMessage("inPlaceEditPrompt");
 		chrome.browserAction.setPopup({popup: "popup.html"});
 		icon_path = "proxy_can_edit.png";
 	  }

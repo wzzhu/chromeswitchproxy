@@ -1,0 +1,9 @@
+{
+  "extName": {"message": "Switch HTTP Proxy"},
+  "extDescription": {"message": "Switch Chrome's proxy with one click. Support in-place edit of proxy. By Wenzhang Zhu."},
+  "promptProxyInput": {"message": "Input proxy setting here. Example: myproxy.com:8080."},
+  "noConnection": {"message": "No active connections found. Please check your network."},
+  "noProxy": {"message": "Direct connection."},
+  "proxyIs": {"message": "proxy="},
+  "inPlaceEditPrompt": {"message": ". Click to edit the proxy in-place."}
+}

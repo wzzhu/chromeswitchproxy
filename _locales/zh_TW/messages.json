@@ -1,0 +1,9 @@
+{
+  "extName": {"message": "快速切換HTTP代理"},
+  "extDescription": {"message": "切換Chrome代理，支持現場快速編輯proxy。By Wenzhang Zhu"},
+  "promptProxyInput": {"message": "在這裏輸入代理，例如：myproxy.com:8080。"},
+  "noConnection": {"message": "沒有網絡連接，請檢查你的網絡是否正常。"},
+  "noProxy": {"message": "不設代理"},
+  "proxyIs": {"message": "代理="},
+  "inPlaceEditPrompt": {"message": "。點擊此圖標可現場編輯代理。"}
+}

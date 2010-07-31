@@ -17,7 +17,7 @@
 	    proxy = config.proxyServer;
 	  }
 	}
-    if (proxy != "") {
+    if (proxy && proxy != "") {
 	  show_prompt = false;
 	}
     initInputStyle();
@@ -26,7 +26,7 @@
   function initInputStyle() {
     var input = document.getElementById("proxy_input");
     if (show_prompt) {
-	  input.value = "Input proxy setting here. Example: myproxy.com:8080."
+	  input.value = chrome.i18n.getMessage("promptProxyInput");
 	  input.style.color = "gray";
 	} else {
 	  input.value = proxy;
