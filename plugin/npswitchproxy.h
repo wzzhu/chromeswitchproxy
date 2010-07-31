@@ -1,6 +1,7 @@
 /* ***** BEGIN LICENSE BLOCK *****
-* Copyright 2009 Wenzhang Zhu (wzzhu@cs.hku.hk)
+* Copyright 2009-2010. Wenzhang Zhu (wzzhu@cs.hku.hk)
 * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+*
 * This code was based on the npsimple.c sample code in Gecko-sdk.
 *
 * The contents of this file are subject to the Mozilla Public License Version
@@ -21,17 +22,13 @@
 #include <npupp.h>
 #include <npruntime.h>
 
-enum ProxyState {
-  Proxy_Unknown = 0,
-  Proxy_On,
-  Proxy_Off
-};
-
 struct PluginObj : NPObject {
   NPP npp;
 };
-
 extern NPNetscapeFuncs* npnfuncs;
-
 void DebugLog(const char* msg);
+extern const char* kGetProxyConfigMethod;
+extern const char* kSetProxyConfigMethod;
+extern const char* kGetConnectionNameProperty;
+
 #endif  // __NPSWITCHPROXY_H__

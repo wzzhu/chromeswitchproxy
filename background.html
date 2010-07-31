@@ -1,35 +1,66 @@
 <html>
 <head>
 <script>
-function updateUI(state, connection_name) {
+var should_show_popup = false;
+function hasConnection(plugin) {
+  return plugin.connectionName != "No connection";
+}
+function updateUI() {  
   var icon_path = "proxy_off.png";
-  var proxy_state = "Proxy is off";
-  if (state) {
-    icon_path = "proxy_on.png";
-    proxy_state = "Proxy is on";
+  var plugin = document.getElementById("proxy_plugin");
+  var name = plugin.connectionName;
+  var title;
+  if (!hasConnection(plugin)) {
+    title = "No active connections found. Please check your network.";
+	icon_path = "no_connection.png";
+  } else {
+    var config = plugin.getProxyConfig(); 
+    var proxy_state = "Proxy is off";
+    if (config.useProxy) {
+      icon_path = "proxy_on.png";
+      proxy_state = "proxy=" + config.proxyServer;
+	  if (should_show_popup) {
+	    proxy_state += ". Click to edit the proxy inplace.";
+		chrome.browserAction.setPopup({popup: "popup.html"});
+		icon_path = "proxy_can_edit.png";
+	  }
+    }
+	title = plugin.connectionName + " " + proxy_state;
   }
-  var title = connection_name + " : " + proxy_state;
   chrome.browserAction.setIcon({path: icon_path});
   chrome.browserAction.setTitle({title: title});
 }
 
 chrome.browserAction.onClicked.addListener(function(tab) {
-  var plugin = document.getElementById("pluginobj");
-  updateUI(plugin.toggleProxyState(), plugin.connectionName);
+  var plugin = document.getElementById("proxy_plugin");
+  if (hasConnection(plugin)) {
+    var config = plugin.getProxyConfig();
+    var use_proxy = !config.useProxy;
+    plugin.setProxyConfig(use_proxy);    
+  }
+  should_show_popup = use_proxy;
+  updateUI();
+  
 }); 
-chrome.tabs.onCreated.addListener(function(tab) {
-  var plugin = document.getElementById("pluginobj");
-  updateUI(plugin.getProxyState(), plugin.connectionName);
+chrome.tabs.onCreated.addListener(function(tab) {  
+  updateUI();
 });
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-  var plugin = document.getElementById("pluginobj");
-  updateUI(plugin.getProxyState(), plugin.connectionName);
+  updateUI();
 });
 
+chrome.extension.onConnect.addListener(function(port) {
+  port.onMessage.addListener(function(data) {
+    if (data.message == 'refresh') {
+	  should_show_popup = false;
+	  updateUI();
+	}
+  })
+})
 </script>
 </head>
 <body>
-<object id="pluginobj" type="application/x-switch-wininet-proxy" hidden="true">
+<object id="proxy_plugin" type="application/x-switch-wininet-proxy" hidden="true">
 Failed to load np plugin. You might be using the old version of the extension.</object>
 </body>
 </html>

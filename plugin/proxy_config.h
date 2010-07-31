@@ -21,12 +21,27 @@
 #include <npruntime.h>
 
 struct ProxyConfig {
+  ProxyConfig() {
+    auto_detect = false;
+    auto_config = false;
+    use_proxy = false;
+    auto_config_url = NULL;
+    proxy_server = NULL;
+    bypass_list = NULL;
+  }
+
+  ~ProxyConfig() {
+    delete auto_config_url;
+    delete proxy_server;
+    delete bypass_list;
+  }
+
   bool auto_detect;
   bool auto_config;
   bool use_proxy;
-  const char* auto_config_url;
-  const char* proxy_server;
-  const char* bypass_list;
+  char* auto_config_url;
+  char* proxy_server;
+  char* bypass_list;
 };
 
 struct ProxyConfigObj : NPObject {

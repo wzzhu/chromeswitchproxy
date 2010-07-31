@@ -38,12 +38,12 @@ static const char* properties[] = {
   kBypassListProperty,
 };
 
-inline bool StrNCmp(const char* src, const char* target) {
+inline bool SafeStrCmp(const char* src, const char* target) {
   return strncmp(src, target, strlen(target)) == 0;
 }
 
 static NPObject* Allocate(NPP instance, NPClass* npclass) {
-  return (NPObject*)new ProxyConfigObj;
+  return (NPObject*) new ProxyConfigObj;
 }
 
 static void Deallocate(NPObject* obj) {
@@ -52,13 +52,13 @@ static void Deallocate(NPObject* obj) {
 
 static bool HasProperty(NPObject* obj, NPIdentifier propertyName) {
   DebugLog("npswitchproxy: ProxyConfigHasProperty\n");
-  char* name = npnfuncs->utf8fromidentifier(propertyName);
+  NPUTF8* name = npnfuncs->utf8fromidentifier(propertyName);
   if (!name) {
     return false;
   }
   bool ret_val = false;
   for (int i = 0; i < sizeof(properties) / sizeof(const char*); ++i) {
-    if (StrNCmp((const char*)name, properties[i])) {
+    if (SafeStrCmp((const char*)name, properties[i])) {
       ret_val = true;
       break;
     }
@@ -70,38 +70,41 @@ static bool HasProperty(NPObject* obj, NPIdentifier propertyName) {
 static bool GetProperty(NPObject* obj, NPIdentifier propertyName,
                         NPVariant* result) {
   DebugLog("npswitchproxy: ProxyConfigGetProperty\n");
-  char* name = npnfuncs->utf8fromidentifier(propertyName);
+  NPUTF8* name = npnfuncs->utf8fromidentifier(propertyName);
   if (!name) {
     return false;
   }
+  bool rc = true;
   const ProxyConfig& config = ((ProxyConfigObj*) obj)->config;
-  if (StrNCmp(name, kAutoDetectProperty)) {
+  if (SafeStrCmp(name, kAutoDetectProperty)) {
     BOOLEAN_TO_NPVARIANT(config.auto_detect, *result);
-  } else if (StrNCmp(name, kAutoConfigProperty)) {
+  } else if (SafeStrCmp(name, kAutoConfigProperty)) {
     BOOLEAN_TO_NPVARIANT(config.auto_config, *result);
-  } else if (StrNCmp(name, kUseProxyProperty)) {
+  } else if (SafeStrCmp(name, kUseProxyProperty)) {
     BOOLEAN_TO_NPVARIANT(config.use_proxy, *result);
-  } else if (StrNCmp(name, kAutoConfigUrlProperty)) {
-    if (config.auto_config_url != NULL) {
+  } else if (SafeStrCmp(name, kAutoConfigUrlProperty)) {
+    if (config.auto_config_url) {
       char* utf8_str = npnfuncs->utf8fromidentifier(
           npnfuncs->getstringidentifier(config.auto_config_url));
       STRINGZ_TO_NPVARIANT(utf8_str, *result);
     }
-  } else if (StrNCmp(name, kProxyServerProperty)) {
-    if (config.proxy_server != NULL) {
+  } else if (SafeStrCmp(name, kProxyServerProperty)) {
+    if (config.proxy_server) {
       char* utf8_str = npnfuncs->utf8fromidentifier(
           npnfuncs->getstringidentifier(config.proxy_server));
-      STRINGZ_TO_NPVARIANT(utf8_str, *result);
+      STRINGZ_TO_NPVARIANT(utf8_str, *result);      
     }
-  } else if (StrNCmp(name, kBypassListProperty)) {
-    if (config.bypass_list != NULL) {
+  } else if (SafeStrCmp(name, kBypassListProperty)) {
+    if (config.bypass_list) {
       char* utf8_str = npnfuncs->utf8fromidentifier(
           npnfuncs->getstringidentifier(config.bypass_list));
-      STRINGZ_TO_NPVARIANT(utf8_str, *result);
+      STRINGZ_TO_NPVARIANT(utf8_str, *result);      
     }
+  } else {
+    rc = false;
   }
   npnfuncs->memfree(name);
-  return true;
+  return rc;
 }
 
 static NPClass proxy_config_ref_obj = {
@@ -119,6 +122,7 @@ static NPClass proxy_config_ref_obj = {
 };
 
 ProxyConfigObj* CreateProxyConfigObj(NPP instance) {
-  return (ProxyConfigObj*)
-      (npnfuncs->createobject(instance, &proxy_config_ref_obj));
+  ProxyConfigObj* obj = (ProxyConfigObj*) npnfuncs->createobject(
+      instance, &proxy_config_ref_obj);
+  return obj;
 }

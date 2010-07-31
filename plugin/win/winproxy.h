@@ -20,12 +20,10 @@
 #include "../npswitchproxy.h"
 #include "../proxy_config.h"
 
-extern char utf8_connection_name[];
-bool LoadWinInetDll();
-void UnloadWinInetDll();
-LPWSTR GetCurrentConnectionName();
-ProxyState GetProxyState();
-ProxyState ToggleProxyState();
+bool PlatformDependentStartup();
+void PlatformDependentShutdown();
+bool GetActiveConnectionName(LPWSTR* connection_name);
 bool GetProxyConfig(ProxyConfig* config);
 bool SetProxyConfig(const ProxyConfig& config);
+char* WStrToUtf8(LPCWSTR str);  // Helper functions to convert widechar to utf8.
 #endif  // __WIN_WINPROXY_H__

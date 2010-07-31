@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;\gecko-sdk\include&quot;"
+				AdditionalIncludeDirectories="&quot;gecko-sdk\include&quot;"
 				PreprocessorDefinitions="DEBUG;WIN32;_WINDOWS;XP_WIN32;MOZILLA_STRICT_API;XPCOM_GLUE;XP_WIN;_X86_;NPSIMPLE_EXPORTS;XULRUNNER_SDK"
 				MinimalRebuild="true"
 				ExceptionHandling="1"
@@ -67,7 +67,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="2"
-				ModuleDefinitionFile="npswitchproxy.def"
+				ModuleDefinitionFile="win\npswitchproxy.def"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				RandomizedBaseAddress="1"
@@ -121,11 +121,10 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="3"
-				AdditionalIncludeDirectories="&quot;\gecko-sdk\include&quot;"
+				AdditionalIncludeDirectories="&quot;gecko-sdk\include&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;XP_WIN32;MOZILLA_STRICT_API;XPCOM_GLUE;XP_WIN;_X86_;NPSIMPLE_EXPORTS;XULRUNNER_SDK"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="0"
-				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="0"
 				CallingConvention="0"
@@ -143,7 +142,7 @@
 				Name="VCLinkerTool"
 				LinkIncremental="2"
 				GenerateManifest="false"
-				ModuleDefinitionFile="npswitchproxy.def"
+				ModuleDefinitionFile="win\npswitchproxy.def"
 				GenerateDebugInformation="false"
 				SubSystem="1"
 				RandomizedBaseAddress="1"
@@ -261,7 +260,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\npswitchproxy.c"
+				RelativePath=".\npswitchproxy.cc"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -287,6 +286,10 @@
 						CompileAs="2"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\win\npswitchproxy.def"
+				>
 			</File>
 			<File
 				RelativePath=".\proxy_config.cc"
@@ -328,10 +331,6 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
-			<File
-				RelativePath=".\npswitchproxy.def"
-				>
-			</File>
 			<File
 				RelativePath=".\npswitchproxy.rc"
 				>

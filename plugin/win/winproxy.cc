@@ -1,5 +1,5 @@
 /* ***** BEGIN LICENSE BLOCK *****
-* Copyright 2009 Wenzhang Zhu (wzzhu@cs.hku.hk)
+* Copyright 2009 - 2010 Wenzhang Zhu (wzzhu@cs.hku.hk)
 * Version: MPL 1.1/GPL 2.0/LGPL 2.1
 *
 * The contents of this file are subject to the Mozilla Public License Version
@@ -38,21 +38,23 @@ InternetQueryOptionFunc pInternetQueryOption;
 InternetSetOptionFunc pInternetSetOption;
 InternetGetConnectedStateExFunc pInternetGetConnectedStateEx;
 
-// The global buffer to hold the current Internet connection name.
-const int kMaxLengthOfConnectionName = 1024;
-wchar_t connection_name[kMaxLengthOfConnectionName];
-char utf8_connection_name[kMaxLengthOfConnectionName];
-
-// Convert the wide null-terminated string to utf8 null-terminated string.
+// Converts the wide null-terminated string to utf8 null-terminated string.
 // Note that the return value should be freed after use.
-static char* WStrToUtf8(LPCWSTR str) {
+char* WStrToUtf8(LPCWSTR str) {
   int bufferSize = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)str, -1, NULL, 0, NULL, NULL);
 	char* m = new char[bufferSize];
-	WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)str, -1, m, bufferSize, NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, str, -1, m, bufferSize, NULL, NULL);
 	return m;
 }
 
-bool LoadWinInetDll() {
+LPWSTR Utf8ToWStr(const char * str) {
+  int bufferSize = MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)str, -1, NULL, 0);
+  wchar_t *m = new wchar_t[bufferSize];
+  MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)str, -1, m, bufferSize);
+  return m;
+}
+
+bool PlatformDependentStartup() {
   hWinInetLib = LoadLibrary(TEXT("wininet.dll"));
   if (hWinInetLib == NULL) {
     return false;
@@ -96,80 +98,42 @@ bool LoadWinInetDll() {
   return true;
 }
 
-void UnloadWinInetDll() {
+void PlatformDependentShutdown() {
   if (hWinInetLib != NULL) {
     FreeLibrary(hWinInetLib);
   }
 }
 
-LPWSTR GetCurrentConnectionName() {  
+// Gets current Inet connection name.
+// Return value represents the connection status.
+// If offline, connection_name is set to NULL and return value is false.
+// If online, connection name is set to current connection name in widechar
+// format so that the subsequence call can use this to set the name for
+// Inet APIs. If it is a LAN connection, set connection_name to NULL
+// as required by the Inet APIs. But its return value is also true.
+bool GetActiveConnectionName(LPWSTR* connection_name) {
+  static const int kMaxLengthOfConnectionName = 1024;
+  wchar_t *buf = new wchar_t[kMaxLengthOfConnectionName];  
   DWORD flags;  
-  memset(utf8_connection_name, 0, kMaxLengthOfConnectionName);
   if (pInternetGetConnectedStateEx(
-          &flags,(LPTSTR)connection_name,
-          kMaxLengthOfConnectionName, NULL)) {
-    WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)connection_name,
-                        -1, utf8_connection_name, kMaxLengthOfConnectionName,
-                        NULL, NULL);
-    if ((flags & INTERNET_CONNECTION_LAN) == 0) {
-      DebugLog("npswitchproxy: Got non-Lan connection.\n");
-      return (LPWSTR) connection_name;
+      &flags, (LPTSTR)buf, kMaxLengthOfConnectionName, NULL)) {
+    if (flags & INTERNET_CONNECTION_OFFLINE) {
+      delete buf;
+      *connection_name = NULL;
+      return false;
     }
-  }  
-  return NULL;
-}
-  
-ProxyState GetProxyState() {  
-  INTERNET_PER_CONN_OPTION options[1];
-  options[0].dwOption = INTERNET_PER_CONN_FLAGS;
-  INTERNET_PER_CONN_OPTION_LIST list;	
-  unsigned long nSize = sizeof(INTERNET_PER_CONN_OPTION_LIST);   
-  list.dwSize = nSize;  
-  list.pszConnection = GetCurrentConnectionName();  
-  list.pOptions = options;
-  list.dwOptionCount = 1;
-  list.dwOptionError = 0;	
-  if (pInternetQueryOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION,
-                           &list, &nSize)) {
-      DWORD proxyState = options[0].Value.dwValue;		
-      if (proxyState & PROXY_TYPE_PROXY) {
-        return Proxy_On;
-      } else {
-        return Proxy_Off;
-      }
+    if (flags & INTERNET_CONNECTION_LAN) {
+      // NULL to denote LAN.
+      *connection_name = NULL;
+    } else {
+      *connection_name = buf;
+    }
+    return true;
   }
-  return Proxy_Unknown;
+  delete buf;
+  return false;
 }
 
-ProxyState ToggleProxyState() {
-  INTERNET_PER_CONN_OPTION options[1];
-  options[0].dwOption = INTERNET_PER_CONN_FLAGS;
-  INTERNET_PER_CONN_OPTION_LIST list;	
-  unsigned long nSize = sizeof(INTERNET_PER_CONN_OPTION_LIST);	
-  list.dwSize = nSize;
-  list.pszConnection = GetCurrentConnectionName();
-  list.pOptions = options;
-  list.dwOptionCount = 1;
-  list.dwOptionError = 0;	
-  if (pInternetQueryOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION,
-                           &list, &nSize)) {
-      DWORD dwProxyState = options[0].Value.dwValue;
-      ProxyState state;
-      if (dwProxyState & PROXY_TYPE_PROXY) {
-        dwProxyState &= ~PROXY_TYPE_PROXY;
-        state = Proxy_Off;
-      } else {
-        dwProxyState |= PROXY_TYPE_PROXY;
-        state = Proxy_On;
-      }
-      options[0].Value.dwValue = dwProxyState;
-      if (pInternetSetOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION,
-                             &list, nSize)) {
-          return state;
-      }
-  }
-  return Proxy_Unknown;
-}
 
 bool GetProxyConfig(ProxyConfig* config) {
   INTERNET_PER_CONN_OPTION options[] = {
@@ -180,9 +144,10 @@ bool GetProxyConfig(ProxyConfig* config) {
   };
   INTERNET_PER_CONN_OPTION_LIST list;     
   unsigned long nSize = sizeof INTERNET_PER_CONN_OPTION_LIST;
-
-  list.dwSize = nSize;
-  list.pszConnection = GetCurrentConnectionName();
+  if (!GetActiveConnectionName(&list.pszConnection)) {
+      return false;
+  }
+  list.dwSize = nSize;  
   list.pOptions = options;
   list.dwOptionCount = sizeof options / sizeof INTERNET_PER_CONN_OPTION;
   list.dwOptionError = 0;
@@ -224,9 +189,10 @@ bool SetProxyConfig(const ProxyConfig& config) {
   };
   INTERNET_PER_CONN_OPTION_LIST list;     
   unsigned long nSize = sizeof INTERNET_PER_CONN_OPTION_LIST;
-
-  list.dwSize = nSize;
-  list.pszConnection = GetCurrentConnectionName();
+  if (!GetActiveConnectionName(&list.pszConnection)) {
+      return false;
+  }
+  list.dwSize = nSize;  
   list.pOptions = options;
   list.dwOptionCount = sizeof options / sizeof INTERNET_PER_CONN_OPTION;
   list.dwOptionError = 0;
@@ -241,19 +207,21 @@ bool SetProxyConfig(const ProxyConfig& config) {
     options[0].Value.dwValue |= PROXY_TYPE_PROXY;
   }
   if (config.auto_config_url != NULL) {
-    options[1].Value.pszValue = (LPWSTR) config.auto_config_url;
+    options[1].Value.pszValue = Utf8ToWStr(config.auto_config_url);
   }
   if (config.proxy_server != NULL) {
-    options[2].Value.pszValue = (LPWSTR) config.proxy_server;
+    options[2].Value.pszValue = Utf8ToWStr(config.proxy_server);
   }
   if (config.bypass_list != NULL) {
-    options[3].Value.pszValue = (LPWSTR) config.bypass_list;
+    options[3].Value.pszValue = Utf8ToWStr(config.bypass_list);
   }
   if (pInternetSetOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION,
                          &list, nSize)) {
     DebugLog("npswitchproxy: InternetSetOption succeeded.\n");
     return true;
   }
+  DWORD dw = GetLastError();
+  wprintf(L"Error code: %d\n", dw);
   DebugLog("npswitchproxy: InternetSetOption failed.\n");
   return false;
 }

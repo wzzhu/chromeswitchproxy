@@ -1,0 +1,68 @@
+<html>
+<head>
+<style type="text/css">
+#proxy_input{border-bottom:thin solid gray; border-top:none; border-left:none;border-right:none;color:blue; width:300px}
+</style>
+
+<script type='text/javascript'>
+  var proxy = "";
+  var show_prompt = true;  
+  var bg = chrome.extension.getBackgroundPage();
+  function init() {
+    chrome.browserAction.setPopup({popup: ""});
+    var plugin = bg.proxy_plugin;	
+	if (plugin.connectionName != "No connection") {
+	  var config = plugin.getProxyConfig();
+	  if (config.useProxy) {
+	    proxy = config.proxyServer;
+	  }
+	}
+    if (proxy != "") {
+	  show_prompt = false;
+	}
+    initInputStyle();
+  }
+  
+  function initInputStyle() {
+    var input = document.getElementById("proxy_input");
+    if (show_prompt) {
+	  input.value = "Input proxy setting here. Example: myproxy.com:8080."
+	  input.style.color = "gray";
+	} else {
+	  input.value = proxy;
+	  input.style.color = "blue";
+	}
+  }
+  
+  function onFocus() {
+    if (show_prompt) {
+	  show_prompt = false;
+	  initInputStyle();
+	}
+  }
+  
+  function onKeyUp() {
+    var input = document.getElementById("proxy_input");
+    if (window.event) {
+	  if (window.event.keyCode == 13) {	    
+        var plugin = bg.proxy_plugin;
+	    if (plugin.connectionName != "No connection" &&
+		    input.value != "") {
+	      plugin.setProxyConfig(true, input.value);
+		}
+		chrome.extension.connect().postMessage({message: "refresh"});
+		window.close();		
+	  }
+	}
+  }
+  
+  window.onClose = onClose();
+  function onClose() {
+    chrome.extension.connect().postMessage({message: "refresh"});
+  }
+</script>
+</head>
+<body onload="init()">
+<input id="proxy_input" type="text" maxlength=256 onKeyUp="onKeyUp()" onFocus="onFocus()">
+</body>
+</html>
