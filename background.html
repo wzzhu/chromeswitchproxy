@@ -3,7 +3,7 @@
 <script>
 var should_show_popup = false;
 function hasConnection(plugin) {
-  return plugin.connectionName != "No connection";
+  return plugin.connectionName != "__No connection__";
 }
 function updateUI() {  
   var icon_path = "proxy_off.png";
@@ -31,6 +31,12 @@ function updateUI() {
   chrome.browserAction.setTitle({title: title});
 }
 
+function disablePopup () {
+  chrome.browserAction.setPopup({popup: ""});
+  should_show_popup = false;
+  updateUI();
+}
+
 chrome.browserAction.onClicked.addListener(function(tab) {
   var plugin = document.getElementById("proxy_plugin");
   if (hasConnection(plugin)) {
@@ -40,11 +46,16 @@ chrome.browserAction.onClicked.addListener(function(tab) {
   }
   should_show_popup = use_proxy;
   updateUI();
-  
+  if (should_show_popup) {
+    // Automatically close editing after 10 seconds.
+    setTimeout("disablePopup();", 10000);
+  }  
 }); 
+
 chrome.tabs.onCreated.addListener(function(tab) {  
   updateUI();
 });
+
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
   updateUI();
 });
@@ -52,8 +63,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 chrome.extension.onConnect.addListener(function(port) {
   port.onMessage.addListener(function(data) {
     if (data.message == 'refresh') {
-	  should_show_popup = false;
-	  updateUI();
+	  disablePopup();
 	}
   })
 })
