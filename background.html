@@ -1,9 +1,9 @@
 <html>
 <head>
-<script>
+<script type=""text/css">
 var should_show_popup = false;
 function hasConnection(plugin) {
-  return plugin.connectionName != "__No connection__";
+  return plugin.connectionName != "__No_connection__";
 }
 function updateUI() {  
   var icon_path = "proxy_off.png";
@@ -60,14 +60,33 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
   updateUI();
 });
 
-chrome.extension.onConnect.addListener(function(port) {
-  port.onMessage.addListener(function(data) {
-    if (data.message == 'refresh') {
-	  disablePopup();
-	}
-  })
-})
-</script>
+function loadProxyList() {
+  var str = localStorage["proxyList"];
+  if (!str || str == "") {
+    return [];
+  }
+  var proxyList = JSON.parse(str);  
+  return proxyList;
+}
+
+function storeProxyList(proxyList) {
+  var str = JSON.stringify(proxyList);
+  localStorage["proxyList"] = str;
+}
+
+chrome.extension.onRequest.addListener(
+  function(request, sender, sendResponse) {
+    if (request.message == "refresh") {
+      disablePopup();
+    } else if (request.message == 'loadproxylist') {
+      var proxyList = loadProxyList();
+      sendResponse({list: proxyList});
+    } else if (request.message == 'storeproxylist') {
+      storeProxyList(request.data);
+    }    
+  });
+
+  </script>
 </head>
 <body>
 <object id="proxy_plugin" type="application/x-switch-wininet-proxy" hidden="true">

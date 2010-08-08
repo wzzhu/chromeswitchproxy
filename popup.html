@@ -1,68 +1,312 @@
 <html>
 <head>
-<style type="text/css">
-#proxy_input{border-bottom:thin solid gray; border-top:none; border-left:none;border-right:none;color:blue; width:300px}
+  <style type="text/css">
+.global_action_pane{height:40px;padding-top:4px;padding-bottom:4px;
+                    background-color:#E0EFF6; width:600px;}
+.global_action_item{padding-left:10px;padding-right:10px;cursor:hand;}
+.global_action_button{vertical-align:middle;}
+.global_action_text{font-weight:bold;width:100px;margin-top:5px;
+                    margin-left:0px;height:32px;
+                    font-size:14px; vertical-align:middle; color:black;}
+
+#container{width:600px;}
+.item{height:42px; margin-bottom:5px;margin-top:5px; padding-bottom:5px;}
+.item:hover{opacity:1.0;}
+.input_data{font-size:14px;height:32px;}
+.input_data:hover{opacity:1.0;}
+.active_proxy{font-size:16px;font-weight:bold;height:32px;}
+.input_data:hover{opacity:1.0;}
+.proxy_string{border-bottom:thin solid gray;border-top:none;border-left:none;
+              border-right:none;width:350px;margin-top:5px;margin-left:10px;
+              height:32px;vertical-align:middle; cursor:default; opacity:0.7;}
+.notes {border-bottom:thin solid gray;border-top:none;border-left:none;
+        border-right:none;
+        width:150px;margin-top:5px;margin-left:10px;
+        height:32px;vertical-align:middle;
+        cursor:default;opacity:0.7;}
+
+.delete_proxy_button{height:32px;vertical-align:middle;cursor:hand;}
+.delete_proxy_button:hover{opacity:1.0;}
+
+.enable_proxy_button{height:32px;vertical-align:middle;cursor:hand;}
+.enable_proxy_button:hover{opacity:1.0;}
+
+.blur{opacity:0.2;font-weight:normal; font-size:14px;}
+.clear{opacity:1.0;font-weight:bold;font-size:16px;}
 </style>
 
-<script type='text/javascript'>
+<script type="text/javascript">
+var bg = chrome.extension.getBackgroundPage();
+var plugin = bg.proxy_plugin;
+var item_html_template =
+    '<span><image class="delete_proxy_button blur" ' +
+    'src="remove-server-icon.png" onclick="deleteProxy(#)"/></span>' +
+	  '<span class="input_data"><input type="text" title="' +
+    chrome.i18n.getMessage("promptProxyInput") +
+    '"class="proxy_string" value="" onKeyUp="onKeyUp()">' +
+    '<input type="text" class="notes" value="" onKeyUp="onKeyUp()" title="' +
+    chrome.i18n.getMessage("promptNotes") +
+    '"></span>' +
+    '<span><image class="enable_proxy_button blur" ' +
+    'src="enable-server-icon.png" onclick="enableProxy(#)"/></span>';
+var proxy_list = [];
+var proxy_list_backup = [];
+var active_index = -1;
+var active_index_backup = -1;
+
+var kEnableButtonIndex = 2;
+var kProxyDataIndex = 1;
+var kDeleteButtonIndex = 0;
+
+// Begin of UI operations
+function addProxyElement(proxy, id) {
+  var container = document.getElementById("container");
+  if (!container) {
+    return;
+  }
+  var new_element = document.createElement("div");
+  new_element.innerHTML = item_html_template.replace(/#/g, id.toString());
+  new_element.setAttribute("id", id.toString());
+  new_element.children[kProxyDataIndex].children[0].value = proxy.proxy;
+  new_element.children[kProxyDataIndex].children[1].value = proxy.notes;
+  container.insertBefore(new_element, null);
+}
+
+function setProxyState(index, is_active) {
+  var container = document.getElementById("container");
+  if (!container) {
+    return;
+  }
+  if (index < 0 || index >= container.children.length) {
+    return;
+  }
+  var element = container.children[index];
+  if (is_active) {
+    element.children[kEnableButtonIndex].children[0].
+        setAttribute("class", "enable_proxy_button clear");
+    element.children[kProxyDataIndex].children[0].setAttribute(
+        "class", "clear proxy_string");
+    element.children[kProxyDataIndex].children[1].
+        setAttribute("class", "clear notes");
+  } else {
+    element.children[kEnableButtonIndex].children[0].
+        setAttribute("class", "enable_proxy_button blur");
+    element.children[kProxyDataIndex].children[0].
+        setAttribute("class", "proxy_string");
+    element.children[kProxyDataIndex].children[1].
+        setAttribute("class", "notes");
+  }
+}
+
+function clearProxyList() {
+  var container = document.getElementById("container");
+  if (!container) {
+    return;
+  }
+  if (container.hasChildNodes()) {
+    while(container.childNodes.length >= 1) {
+      container.removeChild(container.firstChild);
+    }
+  }
+}
+
+function refreshProxyList() {
+  clearProxyList();
+  for (var i = 0; i < proxy_list.length; ++i) {
+    addProxyElement(proxy_list[i], i);
+    setProxyState(i, i == active_index);
+  }
+  updateGlobalActionPane();
+}
+
+function updateGlobalActionPane() {
+  var global_pane = document.getElementById("global_action_pane");
+  var style = proxy_list.length == 0 ?
+      "global_action_item item clear" :
+      "global_action_item item blur";
+  for (var i = 0; i < global_pane.children.length; ++i) {
+    global_pane.children[i].setAttribute("class", style);
+  }
+}
+
+function initGlobalActionPane() {
+var buttons =
+    '<span id="global_add_proxy" onclick="addProxy()" ' +
+    'class="global_action_item">' +
+    '<image class="global_action_button" src="add-server-icon.png"/>' +
+    '<span class="global_action_text">' +
+    chrome.i18n.getMessage("addProxy") +
+    '</span></span>' +
+    '<span id="global_clear_proxies" onclick="clearAllProxies()" ' +
+    'class="global_action_item">' +
+    '<image class="global_action_button" src="clear-server-icon.png"/>' +
+    '<span class="global_action_text">' +
+    chrome.i18n.getMessage("clearAllProxies") +
+    '</span></span>' +
+    '<span id="global_reset_proxy" onclick="resetProxyList()" ' +
+    'class="global_action_item">' +
+    '<image class="global_action_button" src="reset-server-icon.png"/>' +
+    '<span class="global_action_text">' +
+    chrome.i18n.getMessage("revertChanges") +
+    '</span></span>';
+    document.getElementById("global_action_pane").innerHTML = buttons;
+}
+// End of UI operations.
+
+// Begin of UI controllers.
+function onKeyUp() {
+  collectProxyList();
+  storeProxyList();
+  if (window.event) {
+    if (window.event.keyCode == 13) {
+      updateProxyConfig();
+      window.close();
+    }
+  }
+}
+
+function deleteProxy(index) {
+  var container = document.getElementById("container");
+  if (!container) {
+    return;
+  }
+  if (index < 0 || index >= container.children.length) {
+    return;
+  }
+  var need_close = false;
+  if (index == active_index) {
+    active_index = -1;
+    need_close = true;
+  } else if (index < active_index) {
+    --active_index;
+  }
+  proxy_list.splice(index, 1);
+  storeProxyList();
+  refreshProxyList();
+  if (need_close) {
+    updateProxyConfig();
+    window.close();
+  }
+}
+
+function enableProxy(index) {
+  if (index != active_index) {
+    setProxyState(active_index, false);
+	  active_index = index;
+	  setProxyState(index, true);
+  }
+  collectProxyList();
+  storeProxyList();
+  updateProxyConfig();
+  window.close();
+}
+
+function clearAllProxies() {
+  proxy_list = [];
+  active_index = -1;
+  clearProxyList();
+  storeProxyList();
+  updateGlobalActionPane();
+}
+
+function addProxy() {
+  var proxy = {proxy:"",
+               notes:""};
+  proxy_list.splice(0,0,proxy);
+  if (active_index >= 0) {
+    ++active_index;
+  }
+  refreshProxyList();
+  collectProxyList();
+  storeProxyList();
+}
+
+function resetProxyList() {
+  proxy_list = backup_list.slice(0);
+  active_index = active_index_backup;
+  storeProxyList();
+  refreshProxyList();
+}
+
+function collectProxyList() {
+  var container = document.getElementById("container");
+  if (!container) {
+    return;
+  }
+  proxy_list = [];
+  for (var i = 0; i < container.children.length; ++i) {
+    var proxy = {proxy: container.children[i].children[kProxyDataIndex].
+        children[0].value,
+                 notes: container.children[i].children[kProxyDataIndex].
+        children[1].value};
+    proxy_list.push(proxy);
+    console.log(proxy);
+  }
+}
+// End of UI controller
+
+// Begin of data models.
+function init() {
+  chrome.extension.sendRequest(
+    {message:"loadproxylist"},
+    function(response){
+      proxy_list = response.list;
+      start();
+    });
+}
+
+function storeProxyList() {
+  chrome.extension.sendRequest(
+    {message: "storeproxylist",
+     data: proxy_list});
+}
+// End of data models.
+
+function initActiveProxy() {
+  active_index = -1;
+  if (plugin.connectionName == "__No_connection__") {
+    return;
+  }
+	var config = plugin.getProxyConfig();
   var proxy = "";
-  var show_prompt = true;  
-  var bg = chrome.extension.getBackgroundPage();
-  function init() {
-    chrome.browserAction.setPopup({popup: ""});
-    var plugin = bg.proxy_plugin;	
-	if (plugin.connectionName != "No connection") {
-	  var config = plugin.getProxyConfig();
-	  if (config.useProxy) {
-	    proxy = config.proxyServer;
-	  }
-	}
-    if (proxy && proxy != "") {
-	  show_prompt = false;
-	}
-    initInputStyle();
+	if (config.useProxy) {
+	  proxy = config.proxyServer;
+    for (var i = 0; i < proxy_list.length; ++i) {
+      if (proxy == proxy_list[i].proxy) {
+        active_index = i;
+        break;
+      }
+    }
+    if (active_index < 0) {
+      active_index = 0;  // We will insert current proxy in first item.
+      proxy_list.splice(0, 0, {proxy:proxy, notes:""});
+      storeProxyList();
+    }
   }
-  
-  function initInputStyle() {
-    var input = document.getElementById("proxy_input");
-    if (show_prompt) {
-	  input.value = chrome.i18n.getMessage("promptProxyInput");
-	  input.style.color = "gray";
-	} else {
-	  input.value = proxy;
-	  input.style.color = "blue";
-	}
+}
+
+function start() {
+  chrome.browserAction.setPopup({popup: ""});
+  initActiveProxy();
+  backup_list = proxy_list.slice(0);
+  active_index_backup = active_index;
+  initGlobalActionPane();
+  refreshProxyList();
+}
+
+function updateProxyConfig() {
+  var config = plugin.getProxyConfig();
+  if (active_index >= 0 && active_index < proxy_list.length) {
+    if (!config.use_proxy || config.proxyServer != proxy_list[active_index]) {
+      plugin.setProxyConfig(true, proxy_list[active_index].proxy);
+    }
   }
-  
-  function onFocus() {
-    if (show_prompt) {
-	  show_prompt = false;
-	  initInputStyle();
-	}
-  }
-  
-  function onKeyUp() {
-    var input = document.getElementById("proxy_input");
-    if (window.event) {
-	  if (window.event.keyCode == 13) {	    
-        var plugin = bg.proxy_plugin;
-	    if (plugin.connectionName != "No connection" &&
-		    input.value != "") {
-	      plugin.setProxyConfig(true, input.value);
-		}
-		chrome.extension.connect().postMessage({message: "refresh"});
-		window.close();		
-	  }
-	}
-  }
-  
-  window.onClose = onClose();
-  function onClose() {
-    chrome.extension.connect().postMessage({message: "refresh"});
-  }
+}
 </script>
 </head>
 <body onload="init()">
-<input id="proxy_input" type="text" maxlength=256 onKeyUp="onKeyUp()" onFocus="onFocus()">
+<div id="global_action_pane" class="global_action_pane"></div>
+<div id="container"></div>
+
 </body>
 </html>
