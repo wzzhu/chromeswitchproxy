@@ -50,7 +50,7 @@ chrome.browserAction.onClicked.addListener(function(tab) {
   updateUI();
   if (should_show_popup) {
     // Automatically close editing after 10 seconds.
-    setTimeout("disablePopup();", 100000);
+    setTimeout("disablePopup();", 10000);
   }  
 }); 
 
