@@ -31,7 +31,7 @@
 .enable_proxy_button{height:32px;vertical-align:middle;cursor:hand;}
 .enable_proxy_button:hover{opacity:1.0;}
 
-.blur{opacity:0.2;font-weight:normal; font-size:14px;}
+.blur{opacity:0.6;font-weight:normal; font-size:14px;}
 .clear{opacity:1.0;font-weight:bold;font-size:16px;}
 </style>
 
@@ -267,10 +267,13 @@ function initActiveProxy() {
   if (plugin.connectionName == "__No connection__") {
     return;
   }
-	var config = plugin.getProxyConfig();
+  var config = plugin.getProxyConfig();
   var proxy = "";
-	if (config.useProxy) {
-	  proxy = config.proxyServer;
+  if (config.useProxy) {
+    proxy = config.proxyServer;
+    if (config.autoConfig) {
+      proxy = proxy + ";pac=" + config.autoConfigUrl;
+    }
     for (var i = 0; i < proxy_list.length; ++i) {
       if (proxy == proxy_list[i].proxy) {
         active_index = i;
@@ -295,10 +298,22 @@ function start() {
 }
 
 function updateProxyConfig() {
-  var config = plugin.getProxyConfig();
   if (active_index >= 0 && active_index < proxy_list.length) {
+    var config = plugin.getProxyConfig();
+    var proxy = proxy_list[active_index].proxy;
+    var re = new RegExp(";pac=([^;]*)");
+    var match = re.exec(proxy);
+    var pac;
+    if (match && match.length > 1 ) {
+      pac = match[1];
+      proxy = proxy.substr(0, match.index);
+    }
     if (!config.use_proxy || config.proxyServer != proxy_list[active_index]) {
-      plugin.setProxyConfig(true, proxy_list[active_index].proxy);
+      if (!pac) {
+        plugin.setProxyConfig(true, proxy);
+      } else {
+        plugin.setProxyConfig(true, proxy, true, pac);
+      }
     }
   }
 }

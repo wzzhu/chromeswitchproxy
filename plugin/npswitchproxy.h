@@ -19,7 +19,7 @@
 #define __NPSWITCHPROXY_H__
 
 #include <npapi.h>
-#include <npupp.h>
+#include <npfunctions.h>
 #include <npruntime.h>
 
 struct PluginObj : NPObject {

@@ -17,7 +17,7 @@
 #include "proxy_config.h"
 
 #include <npapi.h>
-#include <npupp.h>
+#include <npfunctions.h>
 #include <npruntime.h>
 
 #include "npswitchproxy.h"
@@ -29,6 +29,7 @@ const char* kAutoConfigUrlProperty = "autoConfigUrl";
 const char* kProxyServerProperty = "proxyServer";
 const char* kBypassListProperty = "bypassList";
 
+const int kMaxPropertyNameLen = 20;
 static const char* properties[] = {
   kAutoDetectProperty,
   kAutoConfigProperty,
@@ -39,7 +40,7 @@ static const char* properties[] = {
 };
 
 inline bool SafeStrCmp(const char* src, const char* target) {
-  return strncmp(src, target, strlen(target)) == 0;
+  return strncmp(src, target, kMaxPropertyNameLen) == 0;
 }
 
 static NPObject* Allocate(NPP instance, NPClass* npclass) {

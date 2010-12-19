@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <npapi.h>
-#include <npupp.h>
+#include <npfunctions.h>
 #include <npruntime.h>
 
 #include "proxy_config.h"
@@ -68,25 +68,28 @@ static bool InvokeGetProxyConfig(NPObject* obj, const NPVariant* args,
 
 static void AssignNPStringToVar(const NPString str, char **out) {
   delete *out;
-  *out = new char[str.utf8length + 1];  
-  strncpy(*out, str.utf8characters, str.utf8length);
-  (*out)[str.utf8length] = 0;
+  *out = new char[str.UTF8Length + 1];  
+  strncpy(*out, str.UTF8Characters, str.UTF8Length);
+  (*out)[str.UTF8Length] = 0;
 }
 
 // The following forms are supported.
 // plugin.SetProxyConfig(use_proxy);
 // plugin.SetProxyConfig(use_proxy, proxy_server);
-// plugin.SetProxyConfig(use_proxy, proxy_server, bypass_list);
-// plugin.SetProxyConfig(use_proxy, proxy_server, bypass_list, auto_detect);
-// plugin.SetProxyConfig(use_proxy, proxy_server, bypass_list, auto_detect,
-// auto_config, auto_config_url);
+// plugin.SetProxyConfig(use_proxy, proxy_server, auto_config);
+// plugin.SetProxyConfig(use_proxy, proxy_server, auto_config,
+//                       auto_config_url);
+// plugin.SetProxyConfig(use_proxy, proxy_server, auto_config,
+//                       auto_config_url, bypass_list);
+// plugin.SetProxyConfig(use_proxy, proxy_server, auto_config,
+//                       auto_config_url, bypass_list, auto_detect);
 static bool InvokeSetProxyConfig(NPObject* obj, const NPVariant* args,
                                  uint32_t argCount, NPVariant* result) {
   ProxyConfig config;  
   if (!GetProxyConfig(&config)) {
     return false;
   }
-  if (argCount == 1) {
+  if (argCount == 1 && NPVARIANT_IS_BOOLEAN(args[0])) {
     config.use_proxy = NPVARIANT_TO_BOOLEAN(args[0]);
   } else if (argCount == 2 &&
              NPVARIANT_IS_BOOLEAN(args[0]) &&
@@ -96,34 +99,43 @@ static bool InvokeSetProxyConfig(NPObject* obj, const NPVariant* args,
   } else if (argCount == 3 &&
              NPVARIANT_IS_BOOLEAN(args[0]) &&
              NPVARIANT_IS_STRING(args[1]) &&
-             NPVARIANT_IS_STRING(args[2])) {
+             NPVARIANT_IS_BOOLEAN(args[2])) {
     config.use_proxy = NPVARIANT_TO_BOOLEAN(args[0]);    
     AssignNPStringToVar(NPVARIANT_TO_STRING(args[1]), &config.proxy_server);
-    AssignNPStringToVar(NPVARIANT_TO_STRING(args[2]), &config.bypass_list);
-
+    config.auto_config = NPVARIANT_TO_BOOLEAN(args[2]);
   } else if (argCount == 4 &&
              NPVARIANT_IS_BOOLEAN(args[0]) &&
              NPVARIANT_IS_STRING(args[1]) &&
-             NPVARIANT_IS_STRING(args[2]) &&
-             NPVARIANT_IS_BOOLEAN(args[3])) {
+             NPVARIANT_IS_BOOLEAN(args[2]) &&
+             NPVARIANT_IS_STRING(args[3])) {
     config.use_proxy = NPVARIANT_TO_BOOLEAN(args[0]);
     AssignNPStringToVar(NPVARIANT_TO_STRING(args[1]), &config.proxy_server);
-    AssignNPStringToVar(NPVARIANT_TO_STRING(args[2]), &config.bypass_list);
-    config.auto_detect = NPVARIANT_TO_BOOLEAN(args[3]);
+    config.auto_config = NPVARIANT_TO_BOOLEAN(args[2]);
+    AssignNPStringToVar(NPVARIANT_TO_STRING(args[3]), &config.auto_config_url);
+  } else if (argCount == 5 &&
+             NPVARIANT_IS_BOOLEAN(args[0]) &&
+             NPVARIANT_IS_STRING(args[1]) &&
+             NPVARIANT_IS_BOOLEAN(args[2]) &&
+             NPVARIANT_IS_STRING(args[3]) &&
+             NPVARIANT_IS_STRING(args[4])) {
+    config.use_proxy = NPVARIANT_TO_BOOLEAN(args[0]);
+    AssignNPStringToVar(NPVARIANT_TO_STRING(args[1]), &config.proxy_server);
+    config.auto_config = NPVARIANT_TO_BOOLEAN(args[2]);
+    AssignNPStringToVar(NPVARIANT_TO_STRING(args[3]), &config.auto_config_url);
+    AssignNPStringToVar(NPVARIANT_TO_STRING(args[4]), &config.bypass_list);
   } else if (argCount == 6 &&
              NPVARIANT_IS_BOOLEAN(args[0]) &&
              NPVARIANT_IS_STRING(args[1]) &&
-             NPVARIANT_IS_STRING(args[2]) &&
-             NPVARIANT_IS_BOOLEAN(args[3]) &&
-             NPVARIANT_IS_BOOLEAN(args[4]) &&
-             NPVARIANT_IS_STRING(args[5])) {
+             NPVARIANT_IS_BOOLEAN(args[2]) &&
+             NPVARIANT_IS_STRING(args[3]) &&
+             NPVARIANT_IS_STRING(args[4]) &&
+             NPVARIANT_IS_BOOLEAN(args[5])) {
     config.use_proxy = NPVARIANT_TO_BOOLEAN(args[0]);
     AssignNPStringToVar(NPVARIANT_TO_STRING(args[1]), &config.proxy_server);
-    AssignNPStringToVar(NPVARIANT_TO_STRING(args[2]), &config.bypass_list);
-
-    config.auto_detect = NPVARIANT_TO_BOOLEAN(args[3]);
-    config.auto_config = NPVARIANT_TO_BOOLEAN(args[4]);
-    AssignNPStringToVar(NPVARIANT_TO_STRING(args[5]), &config.auto_config_url);
+    config.auto_config = NPVARIANT_TO_BOOLEAN(args[2]);
+    AssignNPStringToVar(NPVARIANT_TO_STRING(args[3]), &config.auto_config_url);
+    AssignNPStringToVar(NPVARIANT_TO_STRING(args[4]), &config.bypass_list);    
+    config.auto_detect = NPVARIANT_TO_BOOLEAN(args[5]);
   }
   return SetProxyConfig(config);
 }
@@ -245,7 +257,7 @@ static NPClass plugin_ref_obj = {
 };
 
 static NPError NewNPInstance(NPMIMEType pluginType, NPP instance,
-                             uint16 mode, int16 argc, char* argn[],
+                             uint16_t mode, int16_t argc, char* argn[],
                              char* argv[], NPSavedData* saved) {
   DebugLog("npswitchproxy: new\n");
   // We only have one single instance, so don't need to create anything.
@@ -287,7 +299,7 @@ static NPError GetValue(NPP instance, NPPVariable variable, void* value) {
 #if defined(XULRUNNER_SDK)
   case NPPVpluginNeedsXEmbed:
     DebugLog("npswitchproxy: GetValue - xembed\n");
-    *((PRBool *)value) = PR_FALSE;
+    *((NPBool *)value) = 0;
     break;
 #endif
   }

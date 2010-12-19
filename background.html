@@ -2,15 +2,17 @@
 <head>
 <script type=""text/css">
 var should_show_popup = false;
-function hasConnection(plugin) {
+function hasConnection() {
+  var plugin = document.getElementById("proxy_plugin");
   return plugin.connectionName != "__No connection__";
 }
 function updateUI() {  
-  var icon_path = "proxy_off.png";
   var plugin = document.getElementById("proxy_plugin");
+  plugin = document.getElementById("proxy_plugin");
+  var icon_path = "proxy_off.png";
   var name = plugin.connectionName;
   var title;
-  if (!hasConnection(plugin)) {
+  if (!hasConnection()) {
     title = chrome.i18n.getMessage("noConnection");
 	icon_path = "no_connection.png";
   } else {
@@ -38,8 +40,8 @@ function disablePopup () {
 }
 
 chrome.browserAction.onClicked.addListener(function(tab) {
-  var plugin = document.getElementById("proxy_plugin");
-  if (hasConnection(plugin)) {
+  if (hasConnection()) {
+    var plugin = document.getElementById("proxy_plugin");
     var config = plugin.getProxyConfig();
     var use_proxy = !config.useProxy;
     plugin.setProxyConfig(use_proxy);    
@@ -48,7 +50,7 @@ chrome.browserAction.onClicked.addListener(function(tab) {
   updateUI();
   if (should_show_popup) {
     // Automatically close editing after 10 seconds.
-    setTimeout("disablePopup();", 10000);
+    setTimeout("disablePopup();", 100000);
   }  
 }); 
 
@@ -89,7 +91,6 @@ chrome.extension.onRequest.addListener(
   </script>
 </head>
 <body>
-<object id="proxy_plugin" type="application/x-switch-wininet-proxy" hidden="true">
-Failed to load np plugin. You might be using the old version of the extension.</object>
+<embed id="proxy_plugin" type="application/x-switch-wininet-proxy" hidden="true">
 </body>
 </html>

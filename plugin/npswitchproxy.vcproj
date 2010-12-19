@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;gecko-sdk\include&quot;"
+				AdditionalIncludeDirectories="&quot;xulrunner-sdk\include&quot;"
 				PreprocessorDefinitions="DEBUG;WIN32;_WINDOWS;XP_WIN32;MOZILLA_STRICT_API;XPCOM_GLUE;XP_WIN;_X86_;NPSIMPLE_EXPORTS;XULRUNNER_SDK"
 				MinimalRebuild="true"
 				ExceptionHandling="1"
@@ -121,7 +121,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="3"
-				AdditionalIncludeDirectories="&quot;gecko-sdk\include&quot;"
+				AdditionalIncludeDirectories="&quot;xulrunner-sdk\include&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;XP_WIN32;MOZILLA_STRICT_API;XPCOM_GLUE;XP_WIN;_X86_;NPSIMPLE_EXPORTS;XULRUNNER_SDK"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="0"

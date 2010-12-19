@@ -138,7 +138,7 @@ bool GetActiveConnectionName(LPWSTR* connection_name) {
 bool GetProxyConfig(ProxyConfig* config) {
   INTERNET_PER_CONN_OPTION options[] = {
     {INTERNET_PER_CONN_FLAGS, 0},
-    {INTERNET_PER_CONN_AUTOCONFIG_URL, 0},    
+    {INTERNET_PER_CONN_AUTOCONFIG_URL, 0},
     {INTERNET_PER_CONN_PROXY_SERVER, 0},
     {INTERNET_PER_CONN_PROXY_BYPASS, 0},    
   };
@@ -221,7 +221,6 @@ bool SetProxyConfig(const ProxyConfig& config) {
     return true;
   }
   DWORD dw = GetLastError();
-  wprintf(L"Error code: %d\n", dw);
   DebugLog("npswitchproxy: InternetSetOption failed.\n");
   return false;
 }
