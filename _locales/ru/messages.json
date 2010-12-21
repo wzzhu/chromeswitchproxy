@@ -1,13 +1,13 @@
-{
-  "extName": {"message": "���֧�֧ܧݧ��ѧ�֧ݧ� Proxy"},
-  "extDescription": {"message": "����ާ֧ߧ�� �ߧѧ����ۧܧ� ����ܧ�� �� Chrome ��էߧڧ� �ߧѧاѧ�ڧ֧� �ާ����. ����էէ֧�اڧӧѧ֧� �ާԧߧ�ӧ֧ߧߧ�� ��֧էѧܧ�ڧ��ӧѧߧڧ� ����ܧ��-��֧�ӧ֧�� �� ���ڧ�����ӧ�֧� �ӧ�٧ާ�اߧ���� �է�ҧѧӧڧ�� �� �٧ѧܧݧѧէܧ� �ߧ֧�ܧ�ݧ�ܧ� ����ܧ��-��֧�ӧ֧���"},
-  "promptProxyInput": {"message": "���ӧ֧էڧ�� �ߧѧ����ۧܧ� ����ܧ��-��֧�ӧ֧�� �٧է֧��. ���ѧ��ڧާ֧�, myproxy.com:8080."},
-  "noConnection": {"message": "���֧� �ߧѧۧէ֧ߧ� �ѧܧ�ڧӧߧ��� ���֧էڧߧ֧ߧڧ�. ����اѧݧ�ۧ���, ����ӧ֧���� �ӧѧ�� ��֧��."},
-  "noProxy": {"message": "�����ާ�� ���էܧݧ��֧ߧڧ�."},
-  "proxyIs": {"message": "�����ܧ��="},
-  "inPlaceEditPrompt": {"message": ". ���ѧاާڧ��, ����ҧ� �ڧ٧ާ֧ߧڧ�� �ߧѧ����ۧܧ�."},
-  "promptNotes": {"message": "���է֧�� �ӧ� �ާ�ا֧�� �ߧѧ�ڧ�ѧ�� ���ڧ�ѧߧڧ� ����ܧ��-��֧�ӧ֧��."},
-  "addProxy": {"message": "����ҧѧӧڧ�� ����ܧ��-��֧�ӧ֧�"},
-  "clearAllProxies": {"message": "����ڧ��ڧ�� �ӧ�� ����ܧ��-��֧�ӧ֧��"},
-  "revertChanges": {"message": "����ާ֧ߧڧ�� �ڧ٧ާ֧ߧ֧ߧڧ�"}
+﻿{
+  "extName": {"message": "Переключатель Proxy"},
+  "extDescription": {"message": "Поменяй настройки прокси в Chrome одним нажатием мыши. Поддерживает мгновенное редактирование прокси-сервера и присутствует возможность добавить в закладки несколько прокси-серверов"},
+  "promptProxyInput": {"message": "Введите настройки прокси-сервера здесь. Например, myproxy.com:8080."},
+  "noConnection": {"message": "Нет найдены активные соединения. Пожалуйста, проверьте вашу сеть."},
+  "noProxy": {"message": "Прямое подключение."},
+  "proxyIs": {"message": "Прокси="},
+  "inPlaceEditPrompt": {"message": ". Нажмите, чтобы изменить настройки."},
+  "promptNotes": {"message": "Здесь вы можете написать описание прокси-сервера."},
+  "addProxy": {"message": "Добавить прокси-сервер"},
+  "clearAllProxies": {"message": "Очистить все прокси-сервера"},
+  "revertChanges": {"message": "Отменить изменения"}
 }
