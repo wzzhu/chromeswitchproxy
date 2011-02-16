@@ -1,54 +1,69 @@
 <html>
 <head>
 <script type=""text/css">
-var should_show_popup = false;
+var next_click_to_edit = false;
+
 function hasConnection() {
   var plugin = document.getElementById("proxy_plugin");
   return plugin.connectionName != "__No connection__";
 }
+
 function updateUI() {  
   var plugin = document.getElementById("proxy_plugin");
   plugin = document.getElementById("proxy_plugin");
   var icon_path = "proxy_off.png";
   var name = plugin.connectionName;
   var title;
+  var popup_html = "";
   if (!hasConnection()) {
     title = chrome.i18n.getMessage("noConnection");
-	icon_path = "no_connection.png";
+    icon_path = "no_connection.png";
   } else {
     var config = plugin.getProxyConfig(); 
     var proxy_state = chrome.i18n.getMessage("noProxy");
     if (config.useProxy) {
       icon_path = "proxy_on.png";
       proxy_state = chrome.i18n.getMessage("proxyIs") + config.proxyServer;
-	  if (should_show_popup) {
-	    proxy_state += chrome.i18n.getMessage("inPlaceEditPrompt");
-		chrome.browserAction.setPopup({popup: "popup.html"});
-		icon_path = "proxy_can_edit.png";
-	  }
+      if (next_click_to_edit) {
+        proxy_state += chrome.i18n.getMessage("inPlaceEditPrompt");
+        icon_path = "proxy_can_edit.png";
+	popup_html = "popup.html";
+      }
+    } else {
+      if (!config.proxyServer) {
+        // Let user directly open the popup when we don't have proxies defined.
+	popup_html = "popup.html";
+      }
     }
-	title = plugin.connectionName + " " + proxy_state;
+    title = plugin.connectionName + " " + proxy_state;
   }
   chrome.browserAction.setIcon({path: icon_path});
   chrome.browserAction.setTitle({title: title});
+  chrome.browserAction.setPopup({popup: popup_html});
 }
 
 function disablePopup () {
-  chrome.browserAction.setPopup({popup: ""});
-  should_show_popup = false;
-  updateUI();
+  if (next_click_to_edit) {
+    next_click_to_edit = false;
+    updateUI();
+  }
 }
 
 chrome.browserAction.onClicked.addListener(function(tab) {
+  var use_proxy;
   if (hasConnection()) {
     var plugin = document.getElementById("proxy_plugin");
     var config = plugin.getProxyConfig();
-    var use_proxy = !config.useProxy;
-    plugin.setProxyConfig(use_proxy);    
+    use_proxy = !config.useProxy;
+    if (use_proxy && !config.proxyServer) {
+      use_proxy = false;
+    } else {
+      plugin.setProxyConfig(use_proxy);    
+    }
   }
-  should_show_popup = use_proxy;
+  next_click_to_edit = use_proxy;
   updateUI();
-  if (should_show_popup) {
+  if (next_click_to_edit) {
     // Automatically close editing after 10 seconds.
     setTimeout("disablePopup();", 10000);
   }  
@@ -79,7 +94,7 @@ function storeProxyList(proxyList) {
 chrome.extension.onRequest.addListener(
   function(request, sender, sendResponse) {
     if (request.message == "refresh") {
-      disablePopup();
+      updateUI();
     } else if (request.message == 'loadproxylist') {
       var proxyList = loadProxyList();
       sendResponse({list: proxyList});
@@ -88,9 +103,9 @@ chrome.extension.onRequest.addListener(
     }    
   });
 
-  </script>
+</script>
 </head>
-<body>
+<body onload="updateUI();">
 <embed id="proxy_plugin" type="application/x-switch-wininet-proxy" hidden="true">
 </body>
 </html>

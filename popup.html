@@ -119,6 +119,14 @@ function refreshProxyList() {
   updateGlobalActionPane();
 }
 
+function setEditFocusForProxy(index) {
+  var container = document.getElementById("container");
+  if (index < 0 || index >= container.children.length) {
+    return;
+  }
+  container.children[index].children[kProxyDataIndex].children[0].focus();
+}
+
 function updateGlobalActionPane() {
   var global_pane = document.getElementById("global_action_pane");
   var style = proxy_list.length == 0 ?
@@ -159,7 +167,7 @@ function onKeyUp() {
   storeProxyList();
   if (window.event) {
     if (window.event.keyCode == 13) {
-      updateProxyConfig();
+      updateProxyConfig(false);
       window.close();
     }
   }
@@ -184,7 +192,7 @@ function deleteProxy(index) {
   storeProxyList();
   refreshProxyList();
   if (need_close) {
-    updateProxyConfig();
+    updateProxyConfig(true);
     window.close();
   }
 }
@@ -192,12 +200,12 @@ function deleteProxy(index) {
 function enableProxy(index) {
   if (index != active_index) {
     setProxyState(active_index, false);
-	  active_index = index;
-	  setProxyState(index, true);
+    active_index = index;
+    setProxyState(index, true);
   }
   collectProxyList();
   storeProxyList();
-  updateProxyConfig();
+  updateProxyConfig(false);
   window.close();
 }
 
@@ -206,6 +214,7 @@ function clearAllProxies() {
   active_index = -1;
   clearProxyList();
   storeProxyList();
+  updateProxyConfig(true);
   updateGlobalActionPane();
 }
 
@@ -219,6 +228,7 @@ function addProxy() {
   refreshProxyList();
   collectProxyList();
   storeProxyList();
+  setEditFocusForProxy(0);
 }
 
 function resetProxyList() {
@@ -289,7 +299,6 @@ function initActiveProxy() {
 }
 
 function start() {
-  chrome.browserAction.setPopup({popup: ""});
   initActiveProxy();
   backup_list = proxy_list.slice(0);
   active_index_backup = active_index;
@@ -297,7 +306,7 @@ function start() {
   refreshProxyList();
 }
 
-function updateProxyConfig() {
+function updateProxyConfig(clear_system_proxy) {
   if (active_index >= 0 && active_index < proxy_list.length) {
     var config = plugin.getProxyConfig();
     var proxy = proxy_list[active_index].proxy;
@@ -315,7 +324,14 @@ function updateProxyConfig() {
         plugin.setProxyConfig(true, proxy, true, pac);
       }
     }
+  } else {
+    if (clear_system_proxy) {
+      plugin.setProxyConfig(false, "");
+    } else {
+      plugin.setProxyConfig(false);
+    }
   }
+  chrome.extension.sendRequest({message:"refresh"});
 }
 </script>
 </head>

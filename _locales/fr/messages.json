@@ -1,0 +1,13 @@
+﻿{
+  "extName": {"message": "Switch Proxy"},
+  "extDescription": {"message": "Modifiez les paramètres de proie de Chrome en un clic. Supporte la modification à chaud des configurations de proie."},
+  "promptProxyInput": {"message": "Entrez l'adresse du proxy ici. Exemple : monproxy.com:8080."},
+  "noConnection": {"message": "Aucune connexion active trouvée. Veuillez vérifier votre configuration réseau."},
+  "noProxy": {"message": "Connexion directe."},
+  "proxyIs": {"message": "proxy="},
+  "inPlaceEditPrompt": {"message": ". Cliquez pour modifier le proxy à chaud."},
+  "promptNotes": {"message": "Vous pouvez mettre vos notes ici."},
+  "addProxy": {"message": "Ajouter un proxy."},
+  "clearAllProxies": {"message": "Supprimer tous les proxies."},
+  "revertChanges": {"message": "Annuler les modifications."}
+}
