@@ -1,0 +1,293 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		93F59F6114406B900033BA9D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 93F59F6014406B900033BA9D /* Cocoa.framework */; };
+		93F59F6314406B900033BA9D /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 93F59F6214406B900033BA9D /* WebKit.framework */; };
+		93F59F6D14406B900033BA9D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 93F59F6B14406B900033BA9D /* InfoPlist.strings */; };
+		93F59F7F144076E30033BA9D /* npswitchproxy.cc in Sources */ = {isa = PBXBuildFile; fileRef = 93F59F77144076E20033BA9D /* npswitchproxy.cc */; };
+		93F59F80144076E30033BA9D /* proxy_config.cc in Sources */ = {isa = PBXBuildFile; fileRef = 93F59F7E144076E30033BA9D /* proxy_config.cc */; };
+		93F59F83144077080033BA9D /* mac_proxy.cc in Sources */ = {isa = PBXBuildFile; fileRef = 93F59F81144077080033BA9D /* mac_proxy.cc */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		93F59F5D14406B900033BA9D /* switchproxy.webplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = switchproxy.webplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		93F59F6014406B900033BA9D /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		93F59F6214406B900033BA9D /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		93F59F6514406B900033BA9D /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		93F59F6614406B900033BA9D /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		93F59F6714406B900033BA9D /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		93F59F6A14406B900033BA9D /* switchproxy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "switchproxy-Info.plist"; sourceTree = "<group>"; };
+		93F59F6C14406B900033BA9D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		93F59F6E14406B900033BA9D /* switchproxy-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "switchproxy-Prefix.pch"; sourceTree = "<group>"; };
+		93F59F77144076E20033BA9D /* npswitchproxy.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = npswitchproxy.cc; path = ../../../npswitchproxy.cc; sourceTree = "<group>"; };
+		93F59F78144076E20033BA9D /* proxy_config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = proxy_config.h; path = ../../../proxy_config.h; sourceTree = "<group>"; };
+		93F59F79144076E20033BA9D /* npswitchproxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = npswitchproxy.h; path = ../../../npswitchproxy.h; sourceTree = "<group>"; };
+		93F59F7A144076E30033BA9D /* nptypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = nptypes.h; path = ../../../nptypes.h; sourceTree = "<group>"; };
+		93F59F7B144076E30033BA9D /* npruntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = npruntime.h; path = ../../../npruntime.h; sourceTree = "<group>"; };
+		93F59F7C144076E30033BA9D /* npfunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = npfunctions.h; path = ../../../npfunctions.h; sourceTree = "<group>"; };
+		93F59F7D144076E30033BA9D /* npapi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = npapi.h; path = ../../../npapi.h; sourceTree = "<group>"; };
+		93F59F7E144076E30033BA9D /* proxy_config.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = proxy_config.cc; path = ../../../proxy_config.cc; sourceTree = "<group>"; };
+		93F59F81144077080033BA9D /* mac_proxy.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mac_proxy.cc; sourceTree = SOURCE_ROOT; };
+		93F59F82144077080033BA9D /* mac_proxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mac_proxy.h; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		93F59F5A14406B900033BA9D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				93F59F6114406B900033BA9D /* Cocoa.framework in Frameworks */,
+				93F59F6314406B900033BA9D /* WebKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		93F59F5214406B900033BA9D = {
+			isa = PBXGroup;
+			children = (
+				93F59F6814406B900033BA9D /* switchproxy */,
+				93F59F5F14406B900033BA9D /* Frameworks */,
+				93F59F5E14406B900033BA9D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		93F59F5E14406B900033BA9D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				93F59F5D14406B900033BA9D /* switchproxy.webplugin */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		93F59F5F14406B900033BA9D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				93F59F6014406B900033BA9D /* Cocoa.framework */,
+				93F59F6214406B900033BA9D /* WebKit.framework */,
+				93F59F6414406B900033BA9D /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		93F59F6414406B900033BA9D /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				93F59F6514406B900033BA9D /* AppKit.framework */,
+				93F59F6614406B900033BA9D /* CoreData.framework */,
+				93F59F6714406B900033BA9D /* Foundation.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		93F59F6814406B900033BA9D /* switchproxy */ = {
+			isa = PBXGroup;
+			children = (
+				93F59F81144077080033BA9D /* mac_proxy.cc */,
+				93F59F82144077080033BA9D /* mac_proxy.h */,
+				93F59F77144076E20033BA9D /* npswitchproxy.cc */,
+				93F59F78144076E20033BA9D /* proxy_config.h */,
+				93F59F79144076E20033BA9D /* npswitchproxy.h */,
+				93F59F7A144076E30033BA9D /* nptypes.h */,
+				93F59F7B144076E30033BA9D /* npruntime.h */,
+				93F59F7C144076E30033BA9D /* npfunctions.h */,
+				93F59F7D144076E30033BA9D /* npapi.h */,
+				93F59F7E144076E30033BA9D /* proxy_config.cc */,
+				93F59F6914406B900033BA9D /* Supporting Files */,
+			);
+			path = switchproxy;
+			sourceTree = "<group>";
+		};
+		93F59F6914406B900033BA9D /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				93F59F6A14406B900033BA9D /* switchproxy-Info.plist */,
+				93F59F6B14406B900033BA9D /* InfoPlist.strings */,
+				93F59F6E14406B900033BA9D /* switchproxy-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		93F59F5C14406B900033BA9D /* switchproxy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 93F59F7414406B900033BA9D /* Build configuration list for PBXNativeTarget "switchproxy" */;
+			buildPhases = (
+				93F59F5914406B900033BA9D /* Sources */,
+				93F59F5A14406B900033BA9D /* Frameworks */,
+				93F59F5B14406B900033BA9D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = switchproxy;
+			productName = switchproxy;
+			productReference = 93F59F5D14406B900033BA9D /* switchproxy.webplugin */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		93F59F5414406B900033BA9D /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 93F59F5714406B900033BA9D /* Build configuration list for PBXProject "switchproxy" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 93F59F5214406B900033BA9D;
+			productRefGroup = 93F59F5E14406B900033BA9D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				93F59F5C14406B900033BA9D /* switchproxy */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		93F59F5B14406B900033BA9D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				93F59F6D14406B900033BA9D /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		93F59F5914406B900033BA9D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				93F59F7F144076E30033BA9D /* npswitchproxy.cc in Sources */,
+				93F59F80144076E30033BA9D /* proxy_config.cc in Sources */,
+				93F59F83144077080033BA9D /* mac_proxy.cc in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		93F59F6B14406B900033BA9D /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				93F59F6C14406B900033BA9D /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		93F59F7214406B900033BA9D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		93F59F7314406B900033BA9D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		93F59F7514406B900033BA9D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "switchproxy/switchproxy-Prefix.pch";
+				INFOPLIST_FILE = "switchproxy/switchproxy-Info.plist";
+				INSTALL_PATH = "$(HOME)/Library/Internet Plug-Ins";
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-DWEBKIT_DARWIN_SDK",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = webplugin;
+			};
+			name = Debug;
+		};
+		93F59F7614406B900033BA9D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "switchproxy/switchproxy-Prefix.pch";
+				INFOPLIST_FILE = "switchproxy/switchproxy-Info.plist";
+				INSTALL_PATH = "$(HOME)/Library/Internet Plug-Ins";
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-DWEBKIT_DARWIN_SDK",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = webplugin;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		93F59F5714406B900033BA9D /* Build configuration list for PBXProject "switchproxy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				93F59F7214406B900033BA9D /* Debug */,
+				93F59F7314406B900033BA9D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		93F59F7414406B900033BA9D /* Build configuration list for PBXNativeTarget "switchproxy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				93F59F7514406B900033BA9D /* Debug */,
+				93F59F7614406B900033BA9D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 93F59F5414406B900033BA9D /* Project object */;
+}

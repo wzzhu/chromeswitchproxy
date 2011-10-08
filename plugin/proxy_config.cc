@@ -16,10 +16,6 @@
 
 #include "proxy_config.h"
 
-#include <npapi.h>
-#include <npfunctions.h>
-#include <npruntime.h>
-
 #include "npswitchproxy.h"
 
 const char* kAutoDetectProperty = "autoDetect";

@@ -57,7 +57,7 @@ BEGIN
             VALUE "FileVersion", "1, 0, 0, 1"
             VALUE "InternalName", "SwitchProxyPlugin"
             VALUE "LegalCopyright", "Copyright 2009 Wenzhang Zhu."
-            VALUE "MIMEType", "application/x-switch-wininet-proxy"
+            VALUE "MIMEType", "application/x-switch-proxy"
             VALUE "OriginalFilename", "npswitchproxy.dll"
             VALUE "ProductName", "Switch Proxy Plugin"
             VALUE "ProductVersion", "1, 0, 0, 3"

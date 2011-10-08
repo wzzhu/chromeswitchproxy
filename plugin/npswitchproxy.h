@@ -1,5 +1,5 @@
 /* ***** BEGIN LICENSE BLOCK *****
-* Copyright 2009-2010. Wenzhang Zhu (wzzhu@cs.hku.hk)
+* Copyright 2009-2011. Wenzhang Zhu (wzzhu@cs.hku.hk)
 * Version: MPL 1.1/GPL 2.0/LGPL 2.1
 *
 * This code was based on the npsimple.c sample code in Gecko-sdk.
@@ -18,9 +18,9 @@
 #ifndef __NPSWITCHPROXY_H__
 #define __NPSWITCHPROXY_H__
 
-#include <npapi.h>
-#include <npfunctions.h>
-#include <npruntime.h>
+#include "npapi.h"
+#include "npfunctions.h"
+#include "npruntime.h"
 
 struct PluginObj : NPObject {
   NPP npp;

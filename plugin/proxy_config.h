@@ -16,9 +16,9 @@
 
 #ifndef __PROXY_CONFIG_H__
 #define __PROXY_CONFIG_H__
-#include <npapi.h>
-#include <npfunctions.h>
-#include <npruntime.h>
+#include "npapi.h"
+#include "npfunctions.h"
+#include "npruntime.h"
 
 struct ProxyConfig {
   ProxyConfig() {

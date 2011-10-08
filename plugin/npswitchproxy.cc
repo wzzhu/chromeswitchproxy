@@ -1,5 +1,5 @@
 /* ***** BEGIN LICENSE BLOCK *****
-* Copyright 2009-2010. Wenzhang Zhu (wzzhu@cs.hku.hk)
+* Copyright 2009-2011. Wenzhang Zhu (wzzhu@cs.hku.hk)
 * Version: MPL 1.1/GPL 2.0/LGPL 2.1
 *
 * This code was based on the npsimple.c sample code in Gecko-sdk.
@@ -19,13 +19,15 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <npapi.h>
-#include <npfunctions.h>
-#include <npruntime.h>
 
 #include "proxy_config.h"
-#ifdef WIN32
+
+#if defined(_WINDOWS)
 #include "win/winproxy.h"
+#endif
+
+#if defined(WEBKIT_DARWIN_SDK)
+#include "mac_proxy.h"
 #endif
 
 // Scriptable object to represent the plugin. It is a singleton.
@@ -38,15 +40,9 @@ const char* kSetProxyConfigMethod = "setProxyConfig";
 const char* kGetConnectionNameProperty = "connectionName";
 
 void DebugLog(const char* msg) {
-#ifdef DEBUG
-#ifndef _WINDOWS
-  fputs(msg, stderr);
-#else
-  FILE* out = fopen("\\npswitchproxy.log", "a");
+  FILE* out = fopen("/Users/wzzhu/npswitchproxy.log", "a");
   fputs(msg, out);
   fclose(out);
-#endif
-#endif
 }
 
 // Javascript example use:
@@ -143,7 +139,7 @@ static bool InvokeSetProxyConfig(NPObject* obj, const NPVariant* args,
 static bool GetConnectionName(NPObject* obj, NPVariant* result) {
   DebugLog("npswitchproxy: GetConnectionName\n");
   char* utf8_result;
-  LPWSTR connection_name;
+  char* connection_name;
   if (!GetActiveConnectionName(&connection_name)) {
     utf8_result = npnfuncs->utf8fromidentifier(
         npnfuncs->getstringidentifier("__No connection__"));
@@ -152,11 +148,9 @@ static bool GetConnectionName(NPObject* obj, NPVariant* result) {
       utf8_result = npnfuncs->utf8fromidentifier(
          npnfuncs->getstringidentifier("LAN"));
     } else {
-      char *utf8_connection_name = WStrToUtf8(connection_name);
       utf8_result = npnfuncs->utf8fromidentifier(
-          npnfuncs->getstringidentifier(utf8_connection_name));
+          npnfuncs->getstringidentifier(connection_name));
       delete connection_name;
-      delete utf8_connection_name;
     }    
   }
   STRINGZ_TO_NPVARIANT(utf8_result, *result);
@@ -204,7 +198,7 @@ static bool Invoke(NPObject* obj, NPIdentifier methodName,
  } else {
    // Aim exception handling. 
    npnfuncs->setexception(obj, "exception during invocation");
-   return false;
+   ret_val = false;
  }
  if (name) {
    npnfuncs->memfree(name);
@@ -335,7 +329,7 @@ NPError OSCALL NP_GetEntryPoints(NPPluginFuncs* nppfuncs) {
 }
 
 #ifndef HIBYTE
-#define HIBYTE(x) ((((uint32)(x)) & 0xff00) >> 8)
+#define HIBYTE(x) ((((uint32_t)(x)) & 0xff00) >> 8)
 #endif
 
 #if !defined(_WINDOWS) && !defined(WEBKIT_DARWIN_SDK)
