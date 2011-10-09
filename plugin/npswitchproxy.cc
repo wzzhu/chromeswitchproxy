@@ -41,9 +41,11 @@ const char* kSetProxyConfigMethod = "setProxyConfig";
 const char* kGetConnectionNameProperty = "connectionName";
 
 void DebugLog(const char* msg) {
-  FILE* out = fopen("/Users/wzzhu/npswitchproxy.log", "a");
+#ifdef DEBUG
+  FILE* out = fopen("/tmp/npswitchproxy.log", "a");
   fputs(msg, out);
   fclose(out);
+#endif
 }
 
 static ProxyBase* proxyImpl;
