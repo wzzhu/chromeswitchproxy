@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "proxy_base.h"
 #include "proxy_config.h"
 
 #if defined(_WINDOWS)
@@ -45,16 +46,18 @@ void DebugLog(const char* msg) {
   fclose(out);
 }
 
+static ProxyBase* proxyImpl;
+
 // Javascript example use:
 // config = plugin.GetProxyConfig;
 // if (config.use_proxy) {
 //   Show proxy is on.
 // }
 static bool InvokeGetProxyConfig(NPObject* obj, const NPVariant* args,
-                                 uint32_t argCount, NPVariant* result) {  
+                                 uint32_t argCount, NPVariant* result) {
   PluginObj* plugin = (PluginObj*)obj;
   ProxyConfigObj* proxy = CreateProxyConfigObj(plugin->npp);
-  if (!GetProxyConfig(&proxy->config)) {
+  if (!proxyImpl->GetProxyConfig(&proxy->config)) {
     return false;
   }
   npnfuncs->retainobject(proxy);
@@ -82,7 +85,7 @@ static void AssignNPStringToVar(const NPString str, char **out) {
 static bool InvokeSetProxyConfig(NPObject* obj, const NPVariant* args,
                                  uint32_t argCount, NPVariant* result) {
   ProxyConfig config;  
-  if (!GetProxyConfig(&config)) {
+  if (!proxyImpl->GetProxyConfig(&config)) {
     return false;
   }
   if (argCount == 1 && NPVARIANT_IS_BOOLEAN(args[0])) {
@@ -133,14 +136,14 @@ static bool InvokeSetProxyConfig(NPObject* obj, const NPVariant* args,
     AssignNPStringToVar(NPVARIANT_TO_STRING(args[4]), &config.bypass_list);    
     config.auto_detect = NPVARIANT_TO_BOOLEAN(args[5]);
   }
-  return SetProxyConfig(config);
+  return proxyImpl->SetProxyConfig(config);
 }
 
 static bool GetConnectionName(NPObject* obj, NPVariant* result) {
   DebugLog("npswitchproxy: GetConnectionName\n");
   char* utf8_result;
   char* connection_name;
-  if (!GetActiveConnectionName(&connection_name)) {
+  if (!proxyImpl->GetActiveConnectionName(&connection_name)) {
     utf8_result = npnfuncs->utf8fromidentifier(
         npnfuncs->getstringidentifier("__No connection__"));
   } else {
@@ -350,7 +353,13 @@ NPError OSCALL NP_Initialize(NPNetscapeFuncs* npnf) {
     NP_GetEntryPoints(nppfuncs);
 #endif
 
-    if (!PlatformDependentStartup()) {
+#if defined(_WINDOWS)
+    proxyImpl = new WinProxy; 
+#elif defined(WEBKIT_DARWIN_SDK)
+    proxyImpl = new MacProxy;
+#endif
+
+    if (!proxyImpl->PlatformDependentStartup()) {
       return NPERR_MODULE_LOAD_FAILED_ERROR;
     }
     return NPERR_NO_ERROR;
@@ -358,7 +367,8 @@ NPError OSCALL NP_Initialize(NPNetscapeFuncs* npnf) {
 
 NPError	OSCALL NP_Shutdown() {
   DebugLog("npswitchproxy: NP_Shutdown\n");
-  PlatformDependentShutdown();
+  proxyImpl->PlatformDependentShutdown();
+  delete proxyImpl;
   return NPERR_NO_ERROR;
 }
 

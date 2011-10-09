@@ -8,25 +8,25 @@
 
 #include "mac_proxy.h"
 
-bool PlatformDependentStartup() {
+bool MacProxy::PlatformDependentStartup() {
   return TRUE;
 }
 
-void PlatformDependentShutdown() {
+void MacProxy::PlatformDependentShutdown() {
 
 }
 
-bool GetActiveConnectionName(char** connection_name) {
+bool MacProxy::GetActiveConnectionName(char** connection_name) {
   char* name = (char*)malloc(10);
   strcpy(name, "Lan-Mac");
   *connection_name = name;
   return TRUE;
 }
 
-bool GetProxyConfig(ProxyConfig* config) {
+bool MacProxy::GetProxyConfig(ProxyConfig* config) {
   return TRUE;
 }
 
-bool SetProxyConfig(const ProxyConfig& config) {
+bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
   return TRUE;
 }
