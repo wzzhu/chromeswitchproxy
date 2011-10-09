@@ -277,11 +277,11 @@ static NPError GetValue(NPP instance, NPPVariable variable, void* value) {
     return NPERR_GENERIC_ERROR;
   case NPPVpluginNameString:
     DebugLog("npswitchproxy: GetValue - name string\n");
-    *((char **)value) = "SwitchProxyPlugin";
+    *((const char **)value) = "SwitchProxyPlugin";
     break;
   case NPPVpluginDescriptionString:
     DebugLog("npswitchproxy: GetValue - description string\n");
-    *((char **)value) = "SwitchProxyPlugin plugin.";
+    *((const char **)value) = "SwitchProxyPlugin plugin.";
     break;
   case NPPVpluginScriptableNPObject:
     DebugLog("npswitchproxy: GetValue - scriptable object\n");
@@ -372,7 +372,7 @@ NPError	OSCALL NP_Shutdown() {
   return NPERR_NO_ERROR;
 }
 
-char* NP_GetMIMEDescription(void) {
+const char* NP_GetMIMEDescription(void) {
   DebugLog("npswitchproxy: NP_GetMIMEDescription\n");
   return "application/x-switch-proxy::wzzhu@cs.hku.hk";
 }

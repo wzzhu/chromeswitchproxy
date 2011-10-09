@@ -1,1 +1,9 @@
-.DS_STORE
+*.swp
+*/build/*
+build
+*.mode1v3
+*.pbxuser
+project.xcworkspace
+xcuserdata
+opencv_device
+*.svn

@@ -91,15 +91,12 @@
 		93F59F6814406B900033BA9D /* switchproxy */ = {
 			isa = PBXGroup;
 			children = (
-				93F59F81144077080033BA9D /* mac_proxy.cc */,
+				93F59F85144133210033BA9D /* npapi_sdk */,
 				93F59F82144077080033BA9D /* mac_proxy.h */,
+				93F59F81144077080033BA9D /* mac_proxy.cc */,
+				93F59F79144076E20033BA9D /* npswitchproxy.h */,
 				93F59F77144076E20033BA9D /* npswitchproxy.cc */,
 				93F59F78144076E20033BA9D /* proxy_config.h */,
-				93F59F79144076E20033BA9D /* npswitchproxy.h */,
-				93F59F7A144076E30033BA9D /* nptypes.h */,
-				93F59F7B144076E30033BA9D /* npruntime.h */,
-				93F59F7C144076E30033BA9D /* npfunctions.h */,
-				93F59F7D144076E30033BA9D /* npapi.h */,
 				93F59F7E144076E30033BA9D /* proxy_config.cc */,
 				93F59F6914406B900033BA9D /* Supporting Files */,
 				93F59F8414412C830033BA9D /* proxy_base.h */,
@@ -115,6 +112,17 @@
 				93F59F6E14406B900033BA9D /* switchproxy-Prefix.pch */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		93F59F85144133210033BA9D /* npapi_sdk */ = {
+			isa = PBXGroup;
+			children = (
+				93F59F7A144076E30033BA9D /* nptypes.h */,
+				93F59F7B144076E30033BA9D /* npruntime.h */,
+				93F59F7C144076E30033BA9D /* npfunctions.h */,
+				93F59F7D144076E30033BA9D /* npapi.h */,
+			);
+			name = npapi_sdk;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
