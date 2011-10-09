@@ -26,7 +26,7 @@ struct PluginObj : NPObject {
   NPP npp;
 };
 extern NPNetscapeFuncs* npnfuncs;
-void DebugLog(const char* msg);
+extern void DebugLog(const char* msg, ...);
 extern const char* kGetProxyConfigMethod;
 extern const char* kSetProxyConfigMethod;
 extern const char* kGetConnectionNameProperty;

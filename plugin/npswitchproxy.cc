@@ -40,10 +40,13 @@ const char* kGetProxyConfigMethod = "getProxyConfig";
 const char* kSetProxyConfigMethod = "setProxyConfig";
 const char* kGetConnectionNameProperty = "connectionName";
 
-void DebugLog(const char* msg) {
+void DebugLog(const char* format, ...) {
 #ifdef DEBUG
   FILE* out = fopen("/tmp/npswitchproxy.log", "a");
-  fputs(msg, out);
+  va_list args;
+  va_start(args, format);
+  vfprintf(out, format, args);
+  va_end(args);
   fclose(out);
 #endif
 }
@@ -144,7 +147,7 @@ static bool InvokeSetProxyConfig(NPObject* obj, const NPVariant* args,
 static bool GetConnectionName(NPObject* obj, NPVariant* result) {
   DebugLog("npswitchproxy: GetConnectionName\n");
   char* utf8_result;
-  char* connection_name;
+  const char* connection_name;
   if (!proxyImpl->GetActiveConnectionName(&connection_name)) {
     utf8_result = npnfuncs->utf8fromidentifier(
         npnfuncs->getstringidentifier("__No connection__"));

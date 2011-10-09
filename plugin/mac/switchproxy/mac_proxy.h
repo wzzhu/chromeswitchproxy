@@ -19,12 +19,16 @@ class MacProxy : public ProxyBase {
   ~MacProxy();
   virtual bool PlatformDependentStartup();
   virtual void PlatformDependentShutdown();
-  virtual bool GetActiveConnectionName(char** connection_name);
+  virtual bool GetActiveConnectionName(const char** connection_name);
   virtual bool GetProxyConfig(ProxyConfig* config);
   virtual bool SetProxyConfig(const ProxyConfig& config);
 
  private:
-  Boolean GetAuthorizationForRootPrivilege();
+  bool GetAuthorizationForRootPrivilege();
+  
+  static int NumberOfBytesInCFString(CFStringRef string_ref);
+  static bool IsNetworkInterfaceActive(CFStringRef if_bsd_name);
+
   AuthorizationRef authorizationRef;
 };
 
