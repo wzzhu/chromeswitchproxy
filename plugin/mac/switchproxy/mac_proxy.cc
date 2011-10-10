@@ -63,8 +63,29 @@ int MacProxy::NumberOfBytesInCFString(CFStringRef string_ref) {
 
 // static
 bool MacProxy::IsNetworkInterfaceActive(CFStringRef if_bsd_name) {
-  // TODO(wzzhu): Implements it using scdynamic store.
-  return true; 
+  SCDynamicStoreContext context = {0, NULL, NULL, NULL, NULL};
+  SCDynamicStoreRef store_ref = SCDynamicStoreCreate(
+      kCFAllocatorDefault,
+      CFSTR("Chrome Switch Proxy Plugin"),
+      NULL,
+      &context);
+  CFMutableStringRef path = CFStringCreateMutable(kCFAllocatorDefault, 0);
+  CFStringAppendFormat(path, NULL,
+                       CFSTR("State:/Network/Interface/%@/Link"),
+                       if_bsd_name);
+  CFPropertyListRef dict = SCDynamicStoreCopyValue(store_ref, path);
+  bool active = false;
+  if (dict && CFGetTypeID(dict) == CFDictionaryGetTypeID() &&
+      CFDictionaryGetValue((CFDictionaryRef)dict, CFSTR("Active")) ==
+      kCFBooleanTrue) {
+    active = true;
+  }
+  if (dict) {
+    CFRelease(dict);
+  }
+  CFRelease(path);
+  CFRelease(store_ref);
+  return active; 
 }
 
 bool MacProxy::GetActiveConnectionName(const char** connection_name) {
@@ -81,7 +102,7 @@ bool MacProxy::GetActiveConnectionName(const char** connection_name) {
   for (int i = 0; i < arraySize; i++) {
     SCNetworkServiceRef service =
         (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
-    if (SCNetworkServiceGetEnabled(service)) {
+    if (service && SCNetworkServiceGetEnabled(service)) {
       SCNetworkInterfaceRef if_ref = SCNetworkServiceGetInterface(service);
       CFStringRef type_ref = SCNetworkInterfaceGetInterfaceType(if_ref);
       if (CFStringCompare(type_ref, CFSTR("Ethernet"), 0) ==
@@ -99,6 +120,7 @@ bool MacProxy::GetActiveConnectionName(const char** connection_name) {
       }
     }
   }
+
   CFRelease(services);
   CFRelease(preference_ref);
   if (active_if_name_ref) {
