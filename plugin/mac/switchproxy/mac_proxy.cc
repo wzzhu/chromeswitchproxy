@@ -10,22 +10,20 @@
 
 #include "npswitchproxy.h"
 
-#include <SystemConfiguration/SystemConfiguration.h>
-
-MacProxy::MacProxy() : authorizationRef(NULL) {
+MacProxy::MacProxy() : authorization_(NULL) {
 }
 
 MacProxy::~MacProxy() {
-  AuthorizationFree(authorizationRef, kAuthorizationFlagDestroyRights);
+  AuthorizationFree(authorization_, kAuthorizationFlagDestroyRights);
 }
 
 bool MacProxy::GetAuthorizationForRootPrivilege() {
   OSStatus status;
-  if (!authorizationRef) {
+  if (!authorization_) {
     status = AuthorizationCreate(NULL,
                                  kAuthorizationEmptyEnvironment,
                                  kAuthorizationFlagDefaults,
-                                 &authorizationRef);
+                                 &authorization_);
     if (status != errAuthorizationSuccess) {
       return false;
     }
@@ -37,7 +35,7 @@ bool MacProxy::GetAuthorizationForRootPrivilege() {
                              kAuthorizationFlagPreAuthorize |
                              kAuthorizationFlagExtendRights;
   status = AuthorizationCopyRights(
-      authorizationRef, &rights, NULL, flags, NULL);
+      authorization_, &rights, NULL, flags, NULL);
   if (status != errAuthorizationSuccess) {
     return false;
   }
@@ -45,26 +43,29 @@ bool MacProxy::GetAuthorizationForRootPrivilege() {
 }
 
 bool MacProxy::PlatformDependentStartup() {
+  sc_preference_ = SCPreferencesCreate(
+      kCFAllocatorDefault, CFSTR("Chrome Switch Proxy Plugin"), NULL);
   return true;
 }
 
 void MacProxy::PlatformDependentShutdown() {
-
+  CFRelease(sc_preference_);
 }
 
 // static
-int MacProxy::NumberOfBytesInCFString(CFStringRef string_ref) {
-  CFIndex len = CFStringGetLength(string_ref);
+int MacProxy::NumberOfBytesInCFString(CFStringRef str) {
+  CFIndex len = CFStringGetLength(str);
   CFIndex used_bytes = 0;
-  CFStringGetBytes(string_ref, CFRangeMake(0, len), kCFStringEncodingUTF8,
+  CFStringGetBytes(str, CFRangeMake(0, len), kCFStringEncodingUTF8,
                    0, false, NULL, len * 4 + 1, &used_bytes);
   return (int)used_bytes;
 }
 
 // static
-bool MacProxy::IsNetworkInterfaceActive(CFStringRef if_bsd_name) {
+bool MacProxy::IsNetworkInterfaceActive(SCNetworkInterfaceRef net_if) {
+  CFStringRef bsd_name = SCNetworkInterfaceGetBSDName(net_if);
   SCDynamicStoreContext context = {0, NULL, NULL, NULL, NULL};
-  SCDynamicStoreRef store_ref = SCDynamicStoreCreate(
+  SCDynamicStoreRef sc_store = SCDynamicStoreCreate(
       kCFAllocatorDefault,
       CFSTR("Chrome Switch Proxy Plugin"),
       NULL,
@@ -72,8 +73,8 @@ bool MacProxy::IsNetworkInterfaceActive(CFStringRef if_bsd_name) {
   CFMutableStringRef path = CFStringCreateMutable(kCFAllocatorDefault, 0);
   CFStringAppendFormat(path, NULL,
                        CFSTR("State:/Network/Interface/%@/Link"),
-                       if_bsd_name);
-  CFPropertyListRef dict = SCDynamicStoreCopyValue(store_ref, path);
+                       bsd_name);
+  CFPropertyListRef dict = SCDynamicStoreCopyValue(sc_store, path);
   bool active = false;
   if (dict && CFGetTypeID(dict) == CFDictionaryGetTypeID() &&
       CFDictionaryGetValue((CFDictionaryRef)dict, CFSTR("Active")) ==
@@ -84,51 +85,55 @@ bool MacProxy::IsNetworkInterfaceActive(CFStringRef if_bsd_name) {
     CFRelease(dict);
   }
   CFRelease(path);
-  CFRelease(store_ref);
+  CFRelease(sc_store);
   return active; 
 }
 
-bool MacProxy::GetActiveConnectionName(const char** connection_name) {
-  SCPreferencesRef preference_ref = SCPreferencesCreate(
-      kCFAllocatorDefault, CFSTR("Chrome Switch Proxy Plugin"), NULL);
-  SCNetworkSetRef network_ref = SCNetworkSetCopyCurrent(preference_ref);
-  if (!network_ref) {
-    CFRelease(preference_ref);
-    return false;
-  }
-  CFArrayRef services = SCNetworkSetCopyServices(network_ref);
+// static
+SCNetworkInterfaceRef MacProxy::GetActiveNetworkInterface(
+    SCNetworkSetRef network_set) {
+  CFArrayRef services = SCNetworkSetCopyServices(network_set);
   int arraySize = CFArrayGetCount(services);
-  CFStringRef active_if_name_ref = NULL;
+  SCNetworkInterfaceRef active_net_if = NULL;
   for (int i = 0; i < arraySize; i++) {
     SCNetworkServiceRef service =
         (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
     if (service && SCNetworkServiceGetEnabled(service)) {
-      SCNetworkInterfaceRef if_ref = SCNetworkServiceGetInterface(service);
-      CFStringRef type_ref = SCNetworkInterfaceGetInterfaceType(if_ref);
-      if (CFStringCompare(type_ref, CFSTR("Ethernet"), 0) ==
+      SCNetworkInterfaceRef net_if = SCNetworkServiceGetInterface(service);
+      CFStringRef if_type = SCNetworkInterfaceGetInterfaceType(net_if);
+      if (CFStringCompare(if_type, CFSTR("Ethernet"), 0) ==
           kCFCompareEqualTo ||
-          CFStringCompare(type_ref, CFSTR("IEEE80211"), 0) ==
+          CFStringCompare(if_type, CFSTR("IEEE80211"), 0) ==
           kCFCompareEqualTo) {
         // Check if the network status is active.
-        CFStringRef bsd_name = SCNetworkInterfaceGetBSDName(if_ref);
-        if (MacProxy::IsNetworkInterfaceActive(bsd_name)) {
-          active_if_name_ref =
-              CFStringCreateCopy(kCFAllocatorDefault,
-                                 SCNetworkServiceGetName(service));
+        if (MacProxy::IsNetworkInterfaceActive(net_if)) {
+          active_net_if = net_if;
           break;
         }
       }
     }
   }
-
   CFRelease(services);
-  CFRelease(preference_ref);
-  if (active_if_name_ref) {
+  return active_net_if;
+}
+
+// static
+bool MacProxy::GetActiveConnectionName(const char** connection_name) {
+  bool result = false;
+  SCNetworkSetRef network_set = SCNetworkSetCopyCurrent(sc_preference_);
+  if (!network_set) {
+    return false;
+  }
+  SCNetworkInterfaceRef net_if =
+      MacProxy::GetActiveNetworkInterface(network_set);
+  if (net_if) {
     CFMutableArrayRef names =
         CFArrayCreateMutable(kCFAllocatorDefault, 0, NULL);
-    CFStringRef current_network_set_name_ref = SCNetworkSetGetName(network_ref);
-    CFArrayAppendValue(names, current_network_set_name_ref);
-    CFArrayAppendValue(names, active_if_name_ref);
+    CFStringRef current_network_set_name = SCNetworkSetGetName(network_set);
+    CFArrayAppendValue(names, current_network_set_name);
+    CFStringRef current_net_if_name =
+        SCNetworkInterfaceGetLocalizedDisplayName(net_if);
+    CFArrayAppendValue(names, current_net_if_name);
     CFStringRef connection_name_ref = CFStringCreateByCombiningStrings(
         kCFAllocatorDefault, names, CFSTR("::"));
     int len = MacProxy::NumberOfBytesInCFString(connection_name_ref);
@@ -143,16 +148,23 @@ bool MacProxy::GetActiveConnectionName(const char** connection_name) {
                      NULL);
     utf8_name[len] = 0;
     *connection_name = (const char*) utf8_name;
-    DebugLog("connection name = %s, len=%d\n", utf8_name, len);
-    CFRelease(active_if_name_ref);
     CFRelease(names);
-    return true;
+    result = true;
   }
-  return false;
+  CFRelease(network_set);
+  return result;
 }
 
 bool MacProxy::GetProxyConfig(ProxyConfig* config) {
-  return true;
+  bool result = false;
+  SCNetworkSetRef network_set = SCNetworkSetCopyCurrent(sc_preference_);
+  if (!network_set) {
+    return false;
+  }
+  // TODO(wzzhu): Get proxy configuration from sc.
+  result = true;
+  CFRelease(network_set);
+  return result;
 }
 
 bool MacProxy::SetProxyConfig(const ProxyConfig& config) {

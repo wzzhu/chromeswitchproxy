@@ -5,7 +5,8 @@ build
 *.mode1v3
 *.pbxuser
 project.xcworkspace
-xcuserstate
+*.xcuserstate
 *.xcuserdata
+*.xcbkptlist
 opencv_device
 *.svn

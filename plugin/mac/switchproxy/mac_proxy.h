@@ -12,6 +12,7 @@
 #include "proxy_base.h"
 
 #include <Security/Security.h>
+#include <SystemConfiguration/SystemConfiguration.h>
 
 class MacProxy : public ProxyBase {
  public:
@@ -26,10 +27,15 @@ class MacProxy : public ProxyBase {
  private:
   bool GetAuthorizationForRootPrivilege();
   
-  static int NumberOfBytesInCFString(CFStringRef string_ref);
-  static bool IsNetworkInterfaceActive(CFStringRef if_bsd_name);
+  static int NumberOfBytesInCFString(CFStringRef str);
 
-  AuthorizationRef authorizationRef;
+  static bool IsNetworkInterfaceActive(SCNetworkInterfaceRef net_if);
+
+  static SCNetworkInterfaceRef GetActiveNetworkInterface(
+      SCNetworkSetRef network_set);
+
+  SCPreferencesRef sc_preference_;
+  AuthorizationRef authorization_;;
 };
 
 #endif  // __MAC_PROXY_H__
