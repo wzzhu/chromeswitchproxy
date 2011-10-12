@@ -27,12 +27,12 @@ function updateUI() {
       if (next_click_to_edit) {
         proxy_state += chrome.i18n.getMessage("inPlaceEditPrompt");
         icon_path = "proxy_can_edit.png";
-	popup_html = "popup.html";
+	      popup_html = "popup.html";
       }
     } else {
       if (!config.proxyServer) {
         // Let user directly open the popup when we don't have proxies defined.
-	popup_html = "popup.html";
+	      popup_html = "popup.html";
       }
     }
     title = plugin.connectionName + " " + proxy_state;

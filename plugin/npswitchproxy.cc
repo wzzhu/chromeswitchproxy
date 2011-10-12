@@ -162,6 +162,7 @@ static bool GetConnectionName(NPObject* obj, NPVariant* result) {
     }    
   }
   STRINGZ_TO_NPVARIANT(utf8_result, *result);
+  DebugLog("npswitchproxy: GetConnectionName Done\n");
   return true;
 }
 
@@ -191,27 +192,29 @@ static bool InvokeDefault(NPObject* obj, const NPVariant* args,
 static bool Invoke(NPObject* obj, NPIdentifier methodName,
                    const NPVariant* args, uint32_t argCount,
                    NPVariant* result) {
- DebugLog("npswitchproxy: Invoke\n");
- char* name = npnfuncs->utf8fromidentifier(methodName);
- bool ret_val = false;
- if (!name) {
-   return false;
- }
- if (!strncmp((const char*)name, kGetProxyConfigMethod,
-                     strlen(kGetProxyConfigMethod))) {
-   ret_val = InvokeGetProxyConfig(obj, args, argCount, result);
- } else if (!strncmp((const char*)name, kSetProxyConfigMethod,
-                     strlen(kSetProxyConfigMethod))) {
-   ret_val = InvokeSetProxyConfig(obj, args, argCount, result);
- } else {
-   // Aim exception handling. 
-   npnfuncs->setexception(obj, "exception during invocation");
-   ret_val = false;
- }
- if (name) {
-   npnfuncs->memfree(name);
- }
- return ret_val;
+  DebugLog("npswitchproxy: Invoke\n");
+  char* name = npnfuncs->utf8fromidentifier(methodName);
+  bool ret_val = false;
+  if (!name) {
+    return false;
+  }
+  if (!strncmp((const char*)name, kGetProxyConfigMethod,
+               strlen(kGetProxyConfigMethod))) {
+    ret_val = InvokeGetProxyConfig(obj, args, argCount, result);
+  } else if (!strncmp((const char*)name, kSetProxyConfigMethod,
+                      strlen(kSetProxyConfigMethod))) {
+    ret_val = InvokeSetProxyConfig(obj, args, argCount, result);
+  } else {
+    // Aim exception handling. 
+    npnfuncs->setexception(obj, "exception during invocation");
+    ret_val = false;
+  }
+  DebugLog("Invoke: %s = %d\n", name, ret_val);
+  if (name) {
+    npnfuncs->memfree(name);
+  }
+  DebugLog("npswitchproxy: End Invoke\n");
+  return ret_val;
 }
 
 static bool HasProperty(NPObject* obj, NPIdentifier propertyName) {
@@ -222,6 +225,7 @@ static bool HasProperty(NPObject* obj, NPIdentifier propertyName) {
                        strlen(kGetConnectionNameProperty))) {
     ret_val = true;
   }
+  DebugLog("Property: %s = %d\n", name, ret_val);
 
   if (name) {
     npnfuncs->memfree(name);
@@ -311,7 +315,7 @@ static NPError GetValue(NPP instance, NPPVariable variable, void* value) {
 
 // Expected by Safari on Darwin.
 static NPError HandleEvent(NPP instance, void* ev) {
-  DebugLog("npswitchproxy: HandleEvent\n");
+  // DebugLog("npswitchproxy: HandleEvent\n");
   return NPERR_NO_ERROR;
 }
 
@@ -346,7 +350,7 @@ NPError OSCALL NP_Initialize(NPNetscapeFuncs* npnf,
 #else
 NPError OSCALL NP_Initialize(NPNetscapeFuncs* npnf) {
 #endif
-    DebugLog("npswitchproxy: NP_Initialize\n");
+    DebugLog("\n\nnpswitchproxy: NP_Initialize\n");
     if(npnf == NULL) {
       return NPERR_INVALID_FUNCTABLE_ERROR;
     }

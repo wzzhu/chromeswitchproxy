@@ -29,6 +29,24 @@ class MacProxy : public ProxyBase {
   
   static int NumberOfBytesInCFString(CFStringRef str);
 
+  static bool GetBoolFromDictionary(
+      CFDictionaryRef dict,
+      CFStringRef key,
+      bool default_value);
+
+  static int GetIntFromDictionary(
+      CFDictionaryRef dict,
+      CFStringRef key,
+      int default_value);
+
+  static char* CopyUtf8StringFromDictionary(
+      CFDictionaryRef dict,
+      CFStringRef key);
+
+  static CFStringRef CreateCFStringFromUtf8String(char* utf8_str);
+
+  static char* CreateUtf8StringFromString(CFStringRef str);
+
   static bool IsNetworkInterfaceActive(SCNetworkInterfaceRef net_if);
 
   static SCNetworkInterfaceRef GetActiveNetworkInterface(
