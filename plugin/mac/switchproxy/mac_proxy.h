@@ -52,7 +52,6 @@ class MacProxy : public ProxyBase {
   static SCNetworkServiceRef CopyActiveNetworkService(
       SCNetworkSetRef network_set);
 
-  SCPreferencesRef sc_preference_;
   AuthorizationRef authorization_;;
 };
 

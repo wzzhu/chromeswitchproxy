@@ -45,13 +45,10 @@ bool MacProxy::GetAuthorizationForRootPrivilege() {
 }
 
 bool MacProxy::PlatformDependentStartup() {
-  sc_preference_ = SCPreferencesCreate(
-      kCFAllocatorDefault, CFSTR("Chrome Switch Proxy Plugin"), NULL);
   return true;
 }
 
 void MacProxy::PlatformDependentShutdown() {
-  CFRelease(sc_preference_);
 }
 
 // static
@@ -191,7 +188,9 @@ SCNetworkServiceRef MacProxy::CopyActiveNetworkService(
 // static
 bool MacProxy::GetActiveConnectionName(const char** connection_name) {
   bool result = false;
-  SCNetworkSetRef network_set = SCNetworkSetCopyCurrent(sc_preference_);
+  SCPreferencesRef sc_preference = SCPreferencesCreate(
+      kCFAllocatorDefault, CFSTR("Chrome Switch Proxy Plugin"), NULL);
+  SCNetworkSetRef network_set = SCNetworkSetCopyCurrent(sc_preference);
   if (!network_set) {
     return false;
   }
@@ -223,7 +222,8 @@ bool MacProxy::GetActiveConnectionName(const char** connection_name) {
   if (service) {
     CFRelease(service);
   }
-  CFRelease(network_set);
+  // CFRelease(network_set);
+  CFRelease(sc_preference);
   DebugLog("Get connection name: %s\n", *connection_name);
   return result;
 }
@@ -311,15 +311,23 @@ bool MacProxy::GetProxyConfig(ProxyConfig* config) {
 }
 
 bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
-  SCNetworkSetRef network_set = SCNetworkSetCopyCurrent(sc_preference_);
+  SCPreferencesRef sc_preference = SCPreferencesCreate(
+      kCFAllocatorDefault, CFSTR("Chrome Switch Proxy Plugin"), NULL);
+  SCNetworkSetRef network_set = SCNetworkSetCopyCurrent(sc_preference);
   if (!network_set) {
+    CFRelease(sc_preference);
     return false;
   }
   SCNetworkServiceRef service =
       MacProxy::CopyActiveNetworkService(network_set);
-  if (!GetAuthorizationForRootPrivilege()) {
+  if (!service || !GetAuthorizationForRootPrivilege()) {
+    // CFRelease(network_set);
+    CFRelease(sc_preference);
     return false;
   }
+  
   CFRelease(service);
+  // CFRelease(network_set);
+  CFRelease(sc_preference);
   return true;
 }
