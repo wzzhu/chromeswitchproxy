@@ -10,6 +10,8 @@
 
 #include "npswitchproxy.h"
 
+static const char* const kNetworkSetupPath = "/sbin/networksetup";
+
 MacProxy::MacProxy() : authorization_(NULL) {
 }
 
@@ -158,11 +160,11 @@ bool MacProxy::IsNetworkInterfaceActive(SCNetworkInterfaceRef net_if) {
 }
 
 // static
-SCNetworkInterfaceRef MacProxy::GetActiveNetworkInterface(
+SCNetworkServiceRef MacProxy::CopyActiveNetworkService(
     SCNetworkSetRef network_set) {
   CFArrayRef services = SCNetworkSetCopyServices(network_set);
   int arraySize = CFArrayGetCount(services);
-  SCNetworkInterfaceRef active_net_if = NULL;
+  SCNetworkServiceRef active_network_service = NULL;
   for (int i = 0; i < arraySize; i++) {
     SCNetworkServiceRef service =
         (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
@@ -175,14 +177,15 @@ SCNetworkInterfaceRef MacProxy::GetActiveNetworkInterface(
           kCFCompareEqualTo) {
         // Check if the network status is active.
         if (MacProxy::IsNetworkInterfaceActive(net_if)) {
-          active_net_if = net_if;
+          active_network_service = service;
+          CFRetain(active_network_service);
           break;
         }
       }
     }
   }
   CFRelease(services);
-  return active_net_if;
+  return active_network_service;
 }
 
 // static
@@ -192,8 +195,13 @@ bool MacProxy::GetActiveConnectionName(const char** connection_name) {
   if (!network_set) {
     return false;
   }
-  SCNetworkInterfaceRef net_if =
-      MacProxy::GetActiveNetworkInterface(network_set);
+  SCNetworkServiceRef service =
+      MacProxy::CopyActiveNetworkService(network_set);
+  SCNetworkInterfaceRef net_if = NULL;
+  if (service) {
+    net_if = SCNetworkServiceGetInterface(service);
+    CFRelease(service);
+  }
   if (net_if) {
     CFMutableArrayRef names =
         CFArrayCreateMutable(kCFAllocatorDefault, 0, NULL);
@@ -301,8 +309,15 @@ bool MacProxy::GetProxyConfig(ProxyConfig* config) {
 }
 
 bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
+  SCNetworkSetRef network_set = SCNetworkSetCopyCurrent(sc_preference_);
+  if (!network_set) {
+    return false;
+  }
+  SCNetworkServiceRef service =
+      MacProxy::CopyActiveNetworkService(network_set);
   if (!GetAuthorizationForRootPrivilege()) {
     return false;
   }
+  CFRelease(service);
   return true;
 }

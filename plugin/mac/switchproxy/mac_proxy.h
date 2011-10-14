@@ -49,7 +49,7 @@ class MacProxy : public ProxyBase {
 
   static bool IsNetworkInterfaceActive(SCNetworkInterfaceRef net_if);
 
-  static SCNetworkInterfaceRef GetActiveNetworkInterface(
+  static SCNetworkServiceRef CopyActiveNetworkService(
       SCNetworkSetRef network_set);
 
   SCPreferencesRef sc_preference_;
