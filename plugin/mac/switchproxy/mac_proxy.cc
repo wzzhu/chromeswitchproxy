@@ -200,7 +200,6 @@ bool MacProxy::GetActiveConnectionName(const char** connection_name) {
   SCNetworkInterfaceRef net_if = NULL;
   if (service) {
     net_if = SCNetworkServiceGetInterface(service);
-    CFRelease(service);
   }
   if (net_if) {
     CFMutableArrayRef names =
@@ -220,6 +219,9 @@ bool MacProxy::GetActiveConnectionName(const char** connection_name) {
         MacProxy::CreateUtf8StringFromString(connection_name_ref);
     CFRelease(names);
     result = true;
+  }
+  if (service) {
+    CFRelease(service);
   }
   CFRelease(network_set);
   DebugLog("Get connection name: %s\n", *connection_name);
