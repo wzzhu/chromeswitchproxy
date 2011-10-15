@@ -27,8 +27,6 @@ class MacProxy : public ProxyBase {
  private:
   bool GetAuthorizationForRootPrivilege();
   
-  static int NumberOfBytesInCFString(CFStringRef str);
-
   static bool GetBoolFromDictionary(
       CFDictionaryRef dict,
       CFStringRef key,
@@ -39,13 +37,11 @@ class MacProxy : public ProxyBase {
       CFStringRef key,
       int default_value);
 
-  static char* CopyUtf8StringFromDictionary(
+  static char* CopyCStringFromDictionary(
       CFDictionaryRef dict,
       CFStringRef key);
 
-  static CFStringRef CreateCFStringFromUtf8String(char* utf8_str);
-
-  static char* CreateUtf8StringFromString(CFStringRef str);
+  static char* CreateCStringFromString(CFStringRef str);
 
   static bool IsNetworkInterfaceActive(SCNetworkInterfaceRef net_if);
 
