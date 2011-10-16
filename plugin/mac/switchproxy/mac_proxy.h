@@ -26,7 +26,12 @@ class MacProxy : public ProxyBase {
 
  private:
   bool GetAuthorizationForRootPrivilege();
-  
+  void ParseProxyLine(const char* start_proxy, const char* end_proxy,
+                      char* proxy, char* port);
+
+  void ParseProxyServerDescription(
+      const char* proxy_server, char* proxies[4], char* ports[4]);
+
   OSStatus RunNetworkSetupCommand(char *const* args);
 
   static bool GetBoolFromDictionary(
