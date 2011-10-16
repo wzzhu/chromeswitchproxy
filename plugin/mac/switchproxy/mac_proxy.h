@@ -27,6 +27,8 @@ class MacProxy : public ProxyBase {
  private:
   bool GetAuthorizationForRootPrivilege();
   
+  OSStatus RunNetworkSetupCommand(char *const* args);
+
   static bool GetBoolFromDictionary(
       CFDictionaryRef dict,
       CFStringRef key,

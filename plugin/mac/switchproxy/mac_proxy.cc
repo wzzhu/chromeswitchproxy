@@ -47,6 +47,15 @@ bool MacProxy::GetAuthorizationForRootPrivilege() {
   return true;
 }
 
+OSStatus MacProxy::RunNetworkSetupCommand(char *const *args) {
+  int state;
+  OSStatus status = AuthorizationExecuteWithPrivileges(
+      authorization_, kNetworkSetupPath, kAuthorizationFlagDefaults,
+      args, NULL);
+  wait(&state);
+  return status;
+}
+
 bool MacProxy::PlatformDependentStartup() {
   return true;
 }
@@ -300,10 +309,8 @@ bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
     return false;
   }
   CFStringRef service_name = SCNetworkServiceGetName(service);
-  OSStatus status;
   char *service_name_str =
       MacProxy::CreateCStringFromString(service_name);
-  FILE *pipe = NULL;
   char *args[kMaxArgNum];
   args[0] = new char[kMaxCommandArgumentLength + 1];
   args[1] = new char[kMaxCommandArgumentLength + 1];
@@ -322,51 +329,27 @@ bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
   } else {
     strncpy(args[2], "off", kMaxCommandArgumentLength);
   }
-  AuthorizationExecuteWithPrivileges(authorization_,
-                                     kNetworkSetupPath,
-                                     kAuthorizationFlagDefaults,
-                                     args,
-                                     &pipe);
+  RunNetworkSetupCommand(args);
   strncpy(args[0], "-setautoproxyurl", kMaxCommandArgumentLength);
   if (config.auto_config_url) {
     strncpy(args[2], config.auto_config_url, kMaxCommandArgumentLength);
   } else {
     strncpy(args[2], "", kMaxCommandArgumentLength);
   }
-  status = AuthorizationExecuteWithPrivileges(authorization_,
-                                     kNetworkSetupPath,
-                                     kAuthorizationFlagDefaults,
-                                     args,
-                                     &pipe);
+  RunNetworkSetupCommand(args);
   if (!config.use_proxy) {
     strncpy(args[0], "-setwebproxystate", kMaxCommandArgumentLength);
     strncpy(args[2], "off", kMaxCommandArgumentLength);
-    status = AuthorizationExecuteWithPrivileges(authorization_,
-                                                kNetworkSetupPath,
-                                                kAuthorizationFlagDefaults,
-                                                args,
-                                                &pipe);
+    RunNetworkSetupCommand(args);
     strncpy(args[0], "-setsecurewebproxystate", kMaxCommandArgumentLength);
     strncpy(args[2], "off", kMaxCommandArgumentLength);
-    status = AuthorizationExecuteWithPrivileges(authorization_,
-                                                kNetworkSetupPath,
-                                                kAuthorizationFlagDefaults,
-                                                args,
-                                                &pipe);
+    RunNetworkSetupCommand(args);
     strncpy(args[0], "-setftpproxystate", kMaxCommandArgumentLength);
     strncpy(args[2], "off", kMaxCommandArgumentLength);
-    status = AuthorizationExecuteWithPrivileges(authorization_,
-                                                kNetworkSetupPath,
-                                                kAuthorizationFlagDefaults,
-                                                args,
-                                                &pipe);
+    RunNetworkSetupCommand(args);
     strncpy(args[0], "-setsocksfirewallproxystate", kMaxCommandArgumentLength);
     strncpy(args[2], "off", kMaxCommandArgumentLength);
-    status = AuthorizationExecuteWithPrivileges(authorization_,
-                                                kNetworkSetupPath,
-                                                kAuthorizationFlagDefaults,
-                                                args,
-                                                &pipe);
+    RunNetworkSetupCommand(args);
   } else {
     char *proxies[4];
     char *ports[4];
@@ -486,20 +469,12 @@ bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
           case 0:
             strncpy(args[0], "-setwebproxystate", kMaxCommandArgumentLength);
             strncpy(args[2], "on", kMaxCommandArgumentLength);
-            AuthorizationExecuteWithPrivileges(authorization_,
-                                               kNetworkSetupPath,
-                                               kAuthorizationFlagDefaults,
-                                               args,
-                                               &pipe);
+            RunNetworkSetupCommand(args);
             strncpy(args[0], "-setwebproxy", kMaxCommandArgumentLength);
             strncpy(args[2], proxies[i], kMaxCommandArgumentLength);
             args[3] = new char[kMaxPortLength + 1];
             strncpy(args[3], ports[i], kMaxPortLength);
-            AuthorizationExecuteWithPrivileges(authorization_,
-                                               kNetworkSetupPath,
-                                               kAuthorizationFlagDefaults,
-                                               args,
-                                               &pipe);
+            RunNetworkSetupCommand(args);
             delete [] args[3];
             args[3] = NULL;
             break;
@@ -507,40 +482,24 @@ bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
             strncpy(args[0], "-setsecurewebproxystate",
                     kMaxCommandArgumentLength);
             strncpy(args[2], "on", kMaxCommandArgumentLength);
-            AuthorizationExecuteWithPrivileges(authorization_,
-                                               kNetworkSetupPath,
-                                               kAuthorizationFlagDefaults,
-                                               args,
-                                               &pipe);
+            RunNetworkSetupCommand(args);
             strncpy(args[0], "-setsecurewebproxy", kMaxCommandArgumentLength);
             strncpy(args[2], proxies[i], kMaxCommandArgumentLength);
             args[3] = new char[kMaxPortLength + 1];
             strncpy(args[3], ports[i], kMaxPortLength);
-            AuthorizationExecuteWithPrivileges(authorization_,
-                                               kNetworkSetupPath,
-                                               kAuthorizationFlagDefaults,
-                                               args,
-                                               &pipe);
+            RunNetworkSetupCommand(args);
             delete [] args[3];
             args[3] = NULL;
             break;
           case 2:
             strncpy(args[0], "-setftpproxystate", kMaxCommandArgumentLength);
             strncpy(args[2], "on", kMaxCommandArgumentLength);
-            AuthorizationExecuteWithPrivileges(authorization_,
-                                               kNetworkSetupPath,
-                                               kAuthorizationFlagDefaults,
-                                               args,
-                                               &pipe);
+            RunNetworkSetupCommand(args);
             strncpy(args[0], "-setftpproxy", kMaxCommandArgumentLength);
             strncpy(args[2], proxies[i], kMaxCommandArgumentLength);
             args[3] = new char[kMaxPortLength + 1];
             strncpy(args[3], ports[i], kMaxPortLength);
-            AuthorizationExecuteWithPrivileges(authorization_,
-                                               kNetworkSetupPath,
-                                               kAuthorizationFlagDefaults,
-                                               args,
-                                               &pipe);
+            RunNetworkSetupCommand(args);
             delete [] args[3];
             args[3] = NULL;
             break;
@@ -548,21 +507,13 @@ bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
             strncpy(args[0], "-setsocksfirewallproxystate",
                     kMaxCommandArgumentLength);
             strncpy(args[2], "on", kMaxCommandArgumentLength);
-            AuthorizationExecuteWithPrivileges(authorization_,
-                                               kNetworkSetupPath,
-                                               kAuthorizationFlagDefaults,
-                                               args,
-                                               &pipe);
+            RunNetworkSetupCommand(args);
             strncpy(args[0], "-setsocksfirewallproxy",
                     kMaxCommandArgumentLength);
             strncpy(args[2], proxies[i], kMaxCommandArgumentLength);
             args[3] = new char[kMaxPortLength + 1];
             strncpy(args[3], ports[i], kMaxPortLength);
-            AuthorizationExecuteWithPrivileges(authorization_,
-                                               kNetworkSetupPath,
-                                               kAuthorizationFlagDefaults,
-                                               args,
-                                               &pipe);
+            RunNetworkSetupCommand(args);
             delete [] args[3];
             args[3] = NULL;
             break;
