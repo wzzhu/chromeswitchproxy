@@ -3,7 +3,7 @@
 //  switchproxy
 //
 //  Created by Wenzhang Zhu on 09/10/2011.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
+//  Copyright 2011 E-Intuit Limited. All rights reserved.
 //
 #ifndef __PROXY_BASE_H__
 #define __PROXY_BASE_H__
