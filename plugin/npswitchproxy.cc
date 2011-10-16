@@ -71,7 +71,7 @@ static bool InvokeGetProxyConfig(NPObject* obj, const NPVariant* args,
 }
 
 static void AssignNPStringToVar(const NPString str, char **out) {
-  delete *out;
+  delete [] *out;
   *out = new char[str.UTF8Length + 1];  
   strncpy(*out, str.UTF8Characters, str.UTF8Length);
   (*out)[str.UTF8Length] = 0;
@@ -158,7 +158,7 @@ static bool GetConnectionName(NPObject* obj, NPVariant* result) {
     } else {
       utf8_result = npnfuncs->utf8fromidentifier(
           npnfuncs->getstringidentifier(connection_name));
-      delete connection_name;
+      delete [] connection_name;
     }    
   }
   STRINGZ_TO_NPVARIANT(utf8_result, *result);

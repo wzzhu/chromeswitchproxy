@@ -10,7 +10,8 @@
 
 #include "npswitchproxy.h"
 
-static const char* const kNetworkSetupPath = "/sbin/networksetup";
+static const char* const kNetworkSetupPath = "/usr/sbin/networksetup";
+static int const kMaxCommandArgumentLength = 128;
 
 MacProxy::MacProxy() : authorization_(NULL) {
 }
@@ -58,11 +59,11 @@ char* MacProxy::CreateCStringFromString(CFStringRef str) {
   CFIndex len = CFStringGetLength(str);
   CFIndex max_len =
       CFStringGetMaximumSizeForEncoding(len, kCFStringEncodingASCII) + 1;
-  char *cstr = new char(max_len);
+  char *cstr = new char[max_len];
   if (CFStringGetCString(str, cstr, max_len, kCFStringEncodingASCII)) {
     return cstr;
   }
-  delete cstr;
+  delete [] cstr;
   return NULL;
 }
 
@@ -276,11 +277,14 @@ bool MacProxy::GetProxyConfig(ProxyConfig* config) {
   DebugLog("proxy:%s\n", config->proxy_server);
 
   CFRelease(array);
+  CFRelease(proxies);
   CFRelease(dynamic_store);
   return true;
 }
 
 bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
+  static int const kMaxArgNum = 5;
+  static int const kMaxPortLength = 16;
   SCPreferencesRef sc_preference = SCPreferencesCreate(
       kCFAllocatorDefault, CFSTR("Chrome Switch Proxy Plugin"), NULL);
   SCNetworkSetRef network_set = SCNetworkSetCopyCurrent(sc_preference);
@@ -295,7 +299,285 @@ bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
     CFRelease(sc_preference);
     return false;
   }
-  
+  CFStringRef service_name = SCNetworkServiceGetName(service);
+  OSStatus status;
+  char *service_name_str =
+      MacProxy::CreateCStringFromString(service_name);
+  FILE *pipe = NULL;
+  char *args[kMaxArgNum];
+  args[0] = new char[kMaxCommandArgumentLength + 1];
+  args[1] = new char[kMaxCommandArgumentLength + 1];
+  args[2] = new char[kMaxCommandArgumentLength + 1];
+  for (int i = 3; i < kMaxArgNum; ++i) {
+    args[i] = NULL;
+  }
+  for (int i = 0; i < 3; ++i) {
+    bzero(args[i], kMaxCommandArgumentLength);
+  }
+  strncpy(args[1], service_name_str, kMaxCommandArgumentLength);
+
+  strncpy(args[0], "-setautoproxystate", kMaxCommandArgumentLength);
+  if (config.auto_config && config.use_proxy) {
+    strncpy(args[2], "on", kMaxCommandArgumentLength);
+  } else {
+    strncpy(args[2], "off", kMaxCommandArgumentLength);
+  }
+  AuthorizationExecuteWithPrivileges(authorization_,
+                                     kNetworkSetupPath,
+                                     kAuthorizationFlagDefaults,
+                                     args,
+                                     &pipe);
+  strncpy(args[0], "-setautoproxyurl", kMaxCommandArgumentLength);
+  if (config.auto_config_url) {
+    strncpy(args[2], config.auto_config_url, kMaxCommandArgumentLength);
+  } else {
+    strncpy(args[2], "", kMaxCommandArgumentLength);
+  }
+  status = AuthorizationExecuteWithPrivileges(authorization_,
+                                     kNetworkSetupPath,
+                                     kAuthorizationFlagDefaults,
+                                     args,
+                                     &pipe);
+  if (!config.use_proxy) {
+    strncpy(args[0], "-setwebproxystate", kMaxCommandArgumentLength);
+    strncpy(args[2], "off", kMaxCommandArgumentLength);
+    status = AuthorizationExecuteWithPrivileges(authorization_,
+                                                kNetworkSetupPath,
+                                                kAuthorizationFlagDefaults,
+                                                args,
+                                                &pipe);
+    strncpy(args[0], "-setsecurewebproxystate", kMaxCommandArgumentLength);
+    strncpy(args[2], "off", kMaxCommandArgumentLength);
+    status = AuthorizationExecuteWithPrivileges(authorization_,
+                                                kNetworkSetupPath,
+                                                kAuthorizationFlagDefaults,
+                                                args,
+                                                &pipe);
+    strncpy(args[0], "-setftpproxystate", kMaxCommandArgumentLength);
+    strncpy(args[2], "off", kMaxCommandArgumentLength);
+    status = AuthorizationExecuteWithPrivileges(authorization_,
+                                                kNetworkSetupPath,
+                                                kAuthorizationFlagDefaults,
+                                                args,
+                                                &pipe);
+    strncpy(args[0], "-setsocksfirewallproxystate", kMaxCommandArgumentLength);
+    strncpy(args[2], "off", kMaxCommandArgumentLength);
+    status = AuthorizationExecuteWithPrivileges(authorization_,
+                                                kNetworkSetupPath,
+                                                kAuthorizationFlagDefaults,
+                                                args,
+                                                &pipe);
+  } else {
+    char *proxies[4];
+    char *ports[4];
+    for (int i = 0; i < 4; ++i) {
+      proxies[i] = new char[kMaxCommandArgumentLength + 1];
+      ports[i] = new char[kMaxPortLength + 1];
+      bzero(proxies[i], kMaxCommandArgumentLength + 1);
+      bzero(ports[i], kMaxPortLength + 1);
+    }
+    char *ptr_base = config.proxy_server;
+    while (*ptr_base && (isspace(*ptr_base) || *ptr_base == ';')) {
+        ++ptr_base;
+    }
+    char *ptr = ptr_base;
+    while (*ptr) {
+      char *end_ptr = strstr(ptr, ";");
+      if (!end_ptr) {
+        end_ptr = &(ptr[strlen(ptr)]);
+      }
+      char *separator = strstr(ptr, "=");
+      char *start_proxy = ptr;
+      char *end_proxy = separator;
+      if (end_proxy) {
+        --end_proxy;
+        while(start_proxy < end_proxy && isspace(*start_proxy)) {
+          ++start_proxy;
+        }
+        while(start_proxy < end_proxy && isspace(*end_proxy)) {
+          --end_proxy;
+        }
+        int index = -1;
+        int len = end_proxy - start_proxy + 1;
+        if (len == 5 && strncmp("https", start_proxy, len) == 0) {
+          index = 1;
+        } else if (len == 4 && strncmp("http", start_proxy, len) == 0) {
+          index = 0;
+        } else if (len == 3 && strncmp("ftp", start_proxy, len) == 0) {
+          index = 2;
+        } else if (len == 5 && strncmp("socks", start_proxy, len) == 0 ) {
+          index = 3;
+        }
+        if (index >= 0) {
+          start_proxy = separator + 1;
+          end_proxy = end_ptr - 1;
+          while(start_proxy < end_proxy && isspace(*start_proxy)) {
+            ++start_proxy;
+          }
+          while(start_proxy < end_proxy && isspace(*end_proxy)) {
+            --end_proxy;
+          }
+          int i = 0;
+          bool begin_port = false;
+          while (start_proxy <= end_proxy) {
+            if (begin_port) {
+              if (i < kMaxPortLength) {
+                ports[index][i] = *start_proxy;
+              }
+            } else {
+              if (*start_proxy == ':') {
+                i = -1;
+                begin_port = true;
+              } else {
+                if (i < kMaxCommandArgumentLength) {
+                  proxies[index][i] = *start_proxy;
+                }
+              }
+            }
+            ++start_proxy;
+            ++i;
+          }
+        }
+      } else {
+        end_proxy = end_ptr - 1;
+        while(start_proxy < end_proxy && isspace(*start_proxy)) {
+          ++start_proxy;
+        }
+        while(start_proxy < end_proxy && isspace(*end_proxy)) {
+          --end_proxy;
+        }
+        char *start_base = start_proxy;
+        // Fill in the rest unfilled proxy entries with the proxy, except socks.
+        for (int index = 0; index < 3; ++index ) {
+          if (strlen(proxies[index]) == 0) {
+            start_proxy = start_base;
+            int i = 0;
+            bool begin_port = false;
+            while (start_proxy <= end_proxy) {
+              if (begin_port) {
+                if (i <= kMaxPortLength) {
+                  ports[index][i] = *start_proxy;
+                }
+              } else {
+                if (*start_proxy == ':') {
+                  i = -1;
+                  begin_port = true;
+                } else {
+                  if (i < kMaxCommandArgumentLength) {
+                    proxies[index][i] = *start_proxy;
+                  }
+                }
+              }
+              ++start_proxy;
+              ++i;
+            }
+          }
+        }
+      }
+      if (*end_ptr) {
+        ptr = end_ptr + 1;
+      } else {
+        ptr = end_ptr;
+      }
+    }
+    for (int i = 0; i < 4; ++i ) {
+      if (strlen(proxies[i])) {
+        switch (i) {
+          case 0:
+            strncpy(args[0], "-setwebproxystate", kMaxCommandArgumentLength);
+            strncpy(args[2], "on", kMaxCommandArgumentLength);
+            AuthorizationExecuteWithPrivileges(authorization_,
+                                               kNetworkSetupPath,
+                                               kAuthorizationFlagDefaults,
+                                               args,
+                                               &pipe);
+            strncpy(args[0], "-setwebproxy", kMaxCommandArgumentLength);
+            strncpy(args[2], proxies[i], kMaxCommandArgumentLength);
+            args[3] = new char[kMaxPortLength + 1];
+            strncpy(args[3], ports[i], kMaxPortLength);
+            AuthorizationExecuteWithPrivileges(authorization_,
+                                               kNetworkSetupPath,
+                                               kAuthorizationFlagDefaults,
+                                               args,
+                                               &pipe);
+            delete [] args[3];
+            args[3] = NULL;
+            break;
+          case 1:
+            strncpy(args[0], "-setsecurewebproxystate",
+                    kMaxCommandArgumentLength);
+            strncpy(args[2], "on", kMaxCommandArgumentLength);
+            AuthorizationExecuteWithPrivileges(authorization_,
+                                               kNetworkSetupPath,
+                                               kAuthorizationFlagDefaults,
+                                               args,
+                                               &pipe);
+            strncpy(args[0], "-setsecurewebproxy", kMaxCommandArgumentLength);
+            strncpy(args[2], proxies[i], kMaxCommandArgumentLength);
+            args[3] = new char[kMaxPortLength + 1];
+            strncpy(args[3], ports[i], kMaxPortLength);
+            AuthorizationExecuteWithPrivileges(authorization_,
+                                               kNetworkSetupPath,
+                                               kAuthorizationFlagDefaults,
+                                               args,
+                                               &pipe);
+            delete [] args[3];
+            args[3] = NULL;
+            break;
+          case 2:
+            strncpy(args[0], "-setftpproxystate", kMaxCommandArgumentLength);
+            strncpy(args[2], "on", kMaxCommandArgumentLength);
+            AuthorizationExecuteWithPrivileges(authorization_,
+                                               kNetworkSetupPath,
+                                               kAuthorizationFlagDefaults,
+                                               args,
+                                               &pipe);
+            strncpy(args[0], "-setftpproxy", kMaxCommandArgumentLength);
+            strncpy(args[2], proxies[i], kMaxCommandArgumentLength);
+            args[3] = new char[kMaxPortLength + 1];
+            strncpy(args[3], ports[i], kMaxPortLength);
+            AuthorizationExecuteWithPrivileges(authorization_,
+                                               kNetworkSetupPath,
+                                               kAuthorizationFlagDefaults,
+                                               args,
+                                               &pipe);
+            delete [] args[3];
+            args[3] = NULL;
+            break;
+          case 3:
+            strncpy(args[0], "-setsocksfirewallproxystate",
+                    kMaxCommandArgumentLength);
+            strncpy(args[2], "on", kMaxCommandArgumentLength);
+            AuthorizationExecuteWithPrivileges(authorization_,
+                                               kNetworkSetupPath,
+                                               kAuthorizationFlagDefaults,
+                                               args,
+                                               &pipe);
+            strncpy(args[0], "-setsocksfirewallproxy",
+                    kMaxCommandArgumentLength);
+            strncpy(args[2], proxies[i], kMaxCommandArgumentLength);
+            args[3] = new char[kMaxPortLength + 1];
+            strncpy(args[3], ports[i], kMaxPortLength);
+            AuthorizationExecuteWithPrivileges(authorization_,
+                                               kNetworkSetupPath,
+                                               kAuthorizationFlagDefaults,
+                                               args,
+                                               &pipe);
+            delete [] args[3];
+            args[3] = NULL;
+            break;
+        }
+      }
+    }
+    for (int i = 0; i < 4; ++i) {
+      delete [] proxies[i];
+      delete [] ports[i];
+    }
+  }
+  delete [] args[0];
+  delete [] args[1];
+  delete [] args[2];
+  delete service_name_str;
   CFRelease(service);
   CFRelease(network_set);
   CFRelease(sc_preference);
