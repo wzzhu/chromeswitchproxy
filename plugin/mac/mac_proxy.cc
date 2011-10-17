@@ -408,21 +408,10 @@ bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
   }
   strncpy(args[1], service_name_str, kMaxCommandArgumentLength);
 
-  strncpy(args[0], "-setautoproxystate", kMaxCommandArgumentLength);
-  if (config.auto_config && config.use_proxy) {
-    strncpy(args[2], "on", kMaxCommandArgumentLength);
-  } else {
-    strncpy(args[2], "off", kMaxCommandArgumentLength);
-  }
-  RunNetworkSetupCommand(args);
-  strncpy(args[0], "-setautoproxyurl", kMaxCommandArgumentLength);
-  if (config.auto_config_url) {
-    strncpy(args[2], config.auto_config_url, kMaxCommandArgumentLength);
-  } else {
-    strncpy(args[2], "", kMaxCommandArgumentLength);
-  }
-  RunNetworkSetupCommand(args);
   if (!config.use_proxy) {
+    strncpy(args[0], "-setautoproxystate", kMaxCommandArgumentLength);
+    strncpy(args[2], "off", kMaxCommandArgumentLength);
+    RunNetworkSetupCommand(args);
     strncpy(args[0], "-setwebproxystate", kMaxCommandArgumentLength);
     strncpy(args[2], "off", kMaxCommandArgumentLength);
     RunNetworkSetupCommand(args);
@@ -436,6 +425,13 @@ bool MacProxy::SetProxyConfig(const ProxyConfig& config) {
     strncpy(args[2], "off", kMaxCommandArgumentLength);
     RunNetworkSetupCommand(args);
   } else {
+    if (config.auto_config && config.auto_config_url) {
+      strncpy(args[2], "on", kMaxCommandArgumentLength);
+      RunNetworkSetupCommand(args);
+      strncpy(args[0], "-setautoproxyurl", kMaxCommandArgumentLength);
+      strncpy(args[2], config.auto_config_url, kMaxCommandArgumentLength);
+      RunNetworkSetupCommand(args);
+    }
     char *proxies[4];
     char *ports[4];
     for (int i = 0; i < 4; ++i) {
