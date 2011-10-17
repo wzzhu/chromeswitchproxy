@@ -381,7 +381,11 @@ NPError	OSCALL NP_Shutdown() {
   return NPERR_NO_ERROR;
 }
 
+#if defined(_WIN32) || defined (__OS2__)
+char* NP_GetMIMEDescription(void) {
+#else
 const char* NP_GetMIMEDescription(void) {
+#endif
   DebugLog("npswitchproxy: NP_GetMIMEDescription\n");
   return "application/x-switch-proxy::wzzhu@cs.hku.hk";
 }

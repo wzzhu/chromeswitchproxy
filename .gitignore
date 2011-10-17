@@ -10,3 +10,6 @@ project.xcworkspace
 *.xcbkptlist
 opencv_device
 *.svn
+*.ncb
+*.suo
+*.user

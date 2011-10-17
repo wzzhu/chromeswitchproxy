@@ -21,86 +21,80 @@
 #include "../npswitchproxy.h"
 #include "../proxy_config.h"
 
-typedef bool (__stdcall* InternetQueryOptionFunc) (
-    HINTERNET hInternet, DWORD dwOption,
-    LPVOID lpBuffer, LPDWORD lpdwBufferLength);
+WinProxy::WinProxy() {
+}
 
-typedef bool (__stdcall* InternetSetOptionFunc) (
-    HINTERNET hInternet, DWORD dwOption,
-    LPVOID lpBuffer, DWORD dwBufferLength);
-
-typedef bool (__stdcall* InternetGetConnectedStateExFunc) (
-    LPDWORD lpdwFlags, LPTSTR lpszConnectionName,
-    DWORD dwNameLen, DWORD dwReserved);
-
-HINSTANCE hWinInetLib;
-InternetQueryOptionFunc pInternetQueryOption;
-InternetSetOptionFunc pInternetSetOption;
-InternetGetConnectedStateExFunc pInternetGetConnectedStateEx;
+WinProxy::~WinProxy() {
+  if (hWinInetLib_ != NULL) {
+    FreeLibrary(hWinInetLib_);
+    hWinInetLib_ = NULL;
+  }
+}
 
 // Converts the wide null-terminated string to utf8 null-terminated string.
 // Note that the return value should be freed after use.
-char* WStrToUtf8(LPCWSTR str) {
+char* WinProxy::WStrToUtf8(LPCWSTR str) {
   int bufferSize = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)str, -1, NULL, 0, NULL, NULL);
 	char* m = new char[bufferSize];
 	WideCharToMultiByte(CP_UTF8, 0, str, -1, m, bufferSize, NULL, NULL);
 	return m;
 }
 
-LPWSTR Utf8ToWStr(const char * str) {
+LPWSTR WinProxy::Utf8ToWStr(const char * str) {
   int bufferSize = MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)str, -1, NULL, 0);
   wchar_t *m = new wchar_t[bufferSize];
   MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)str, -1, m, bufferSize);
   return m;
 }
 
-bool PlatformDependentStartup() {
-  hWinInetLib = LoadLibrary(TEXT("wininet.dll"));
-  if (hWinInetLib == NULL) {
+bool WinProxy::PlatformDependentStartup() {
+  hWinInetLib_ = LoadLibrary(TEXT("wininet.dll"));
+  if (hWinInetLib_ == NULL) {
     return false;
   }
-  pInternetQueryOption = (InternetQueryOptionFunc)GetProcAddress(
-      HMODULE(hWinInetLib), "InternetQueryOptionW");
-  if (pInternetQueryOption == NULL) {
-    pInternetQueryOption = (InternetQueryOptionFunc)GetProcAddress(
-        HMODULE(hWinInetLib), "InternetQueryOptionA");
+  pInternetQueryOption_ = (InternetQueryOptionFunc)GetProcAddress(
+      HMODULE(hWinInetLib_), "InternetQueryOptionW");
+  if (pInternetQueryOption_ == NULL) {
+    pInternetQueryOption_ = (InternetQueryOptionFunc)GetProcAddress(
+        HMODULE(hWinInetLib_), "InternetQueryOptionA");
   }
-  if (pInternetQueryOption == NULL) {
-    FreeLibrary(hWinInetLib);
+  if (pInternetQueryOption_ == NULL) {
+    FreeLibrary(hWinInetLib_);
     return false;
   }
-  pInternetSetOption = (InternetSetOptionFunc)GetProcAddress(
-      HMODULE(hWinInetLib), "InternetSetOptionW");
+  pInternetSetOption_ = (InternetSetOptionFunc)GetProcAddress(
+      HMODULE(hWinInetLib_), "InternetSetOptionW");
 
-  if (pInternetSetOption == NULL) {
-    pInternetSetOption = (InternetSetOptionFunc)GetProcAddress(
-        HMODULE(hWinInetLib), "InternetSetOptionA");
+  if (pInternetSetOption_ == NULL) {
+    pInternetSetOption_ = (InternetSetOptionFunc)GetProcAddress(
+        HMODULE(hWinInetLib_), "InternetSetOptionA");
   }
-  if (pInternetSetOption == NULL) {
-    FreeLibrary(hWinInetLib);
+  if (pInternetSetOption_ == NULL) {
+    FreeLibrary(hWinInetLib_);
     return false;
   }
 
-  if (pInternetGetConnectedStateEx == NULL) {
-    pInternetGetConnectedStateEx =
+  if (pInternetGetConnectedStateEx_ == NULL) {
+    pInternetGetConnectedStateEx_ =
         (InternetGetConnectedStateExFunc)GetProcAddress(
-            HMODULE(hWinInetLib), "InternetGetConnectedStateExW");
+            HMODULE(hWinInetLib_), "InternetGetConnectedStateExW");
   }
-  if (pInternetGetConnectedStateEx == NULL) {
-    pInternetGetConnectedStateEx =
+  if (pInternetGetConnectedStateEx_ == NULL) {
+    pInternetGetConnectedStateEx_ =
         (InternetGetConnectedStateExFunc)GetProcAddress(
-            HMODULE(hWinInetLib), "InternetGetConnectedStateExA");
+            HMODULE(hWinInetLib_), "InternetGetConnectedStateExA");
   }
-  if (pInternetGetConnectedStateEx == NULL) {
-    FreeLibrary(hWinInetLib);
+  if (pInternetGetConnectedStateEx_ == NULL) {
+    FreeLibrary(hWinInetLib_);
     return false;
   }
   return true;
 }
 
-void PlatformDependentShutdown() {
-  if (hWinInetLib != NULL) {
-    FreeLibrary(hWinInetLib);
+void WinProxy::PlatformDependentShutdown() {
+  if (hWinInetLib_ != NULL) {
+    FreeLibrary(hWinInetLib_);
+    hWinInetLib_ = NULL;
   }
 }
 
@@ -111,11 +105,11 @@ void PlatformDependentShutdown() {
 // format so that the subsequence call can use this to set the name for
 // Inet APIs. If it is a LAN connection, set connection_name to NULL
 // as required by the Inet APIs. But its return value is also true.
-bool GetActiveConnectionName(LPWSTR* connection_name) {
+bool WinProxy::GetActiveConnectionName(const void** connection_name) {
   static const int kMaxLengthOfConnectionName = 1024;
   wchar_t *buf = new wchar_t[kMaxLengthOfConnectionName];  
   DWORD flags;  
-  if (pInternetGetConnectedStateEx(
+  if (pInternetGetConnectedStateEx_(
       &flags, (LPTSTR)buf, kMaxLengthOfConnectionName, NULL)) {
     if (flags & INTERNET_CONNECTION_OFFLINE) {
       delete buf;
@@ -126,7 +120,7 @@ bool GetActiveConnectionName(LPWSTR* connection_name) {
       // NULL to denote LAN.
       *connection_name = NULL;
     } else {
-      *connection_name = buf;
+      *connection_name = (const char*)buf;
     }
     return true;
   }
@@ -135,7 +129,7 @@ bool GetActiveConnectionName(LPWSTR* connection_name) {
 }
 
 
-bool GetProxyConfig(ProxyConfig* config) {
+bool WinProxy::GetProxyConfig(ProxyConfig* config) {
   INTERNET_PER_CONN_OPTION options[] = {
     {INTERNET_PER_CONN_FLAGS, 0},
     {INTERNET_PER_CONN_AUTOCONFIG_URL, 0},
@@ -144,15 +138,15 @@ bool GetProxyConfig(ProxyConfig* config) {
   };
   INTERNET_PER_CONN_OPTION_LIST list;     
   unsigned long nSize = sizeof INTERNET_PER_CONN_OPTION_LIST;
-  if (!GetActiveConnectionName(&list.pszConnection)) {
-      return false;
+  if (!GetActiveConnectionName((const void**)&list.pszConnection)) {
+    return false;
   }
   list.dwSize = nSize;  
   list.pOptions = options;
   list.dwOptionCount = sizeof options / sizeof INTERNET_PER_CONN_OPTION;
   list.dwOptionError = 0;
-  if (pInternetQueryOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION,
-                           &list, &nSize)) {
+  if (pInternetQueryOption_(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION,
+                            &list, &nSize)) {
     memset(config, 0, sizeof(ProxyConfig));
     DWORD conn_flag = options[0].Value.dwValue;
     config->auto_detect = (conn_flag & PROXY_TYPE_AUTO_DETECT) ==
@@ -180,7 +174,7 @@ bool GetProxyConfig(ProxyConfig* config) {
   return false;
 }
 
-bool SetProxyConfig(const ProxyConfig& config) {
+bool WinProxy::SetProxyConfig(const ProxyConfig& config) {
   INTERNET_PER_CONN_OPTION options[] = {
     {INTERNET_PER_CONN_FLAGS, 0},
     {INTERNET_PER_CONN_AUTOCONFIG_URL, 0},    
@@ -189,7 +183,7 @@ bool SetProxyConfig(const ProxyConfig& config) {
   };
   INTERNET_PER_CONN_OPTION_LIST list;     
   unsigned long nSize = sizeof INTERNET_PER_CONN_OPTION_LIST;
-  if (!GetActiveConnectionName(&list.pszConnection)) {
+  if (!GetActiveConnectionName((const void**)&list.pszConnection)) {
       return false;
   }
   list.dwSize = nSize;  
@@ -215,7 +209,7 @@ bool SetProxyConfig(const ProxyConfig& config) {
   if (config.bypass_list != NULL) {
     options[3].Value.pszValue = Utf8ToWStr(config.bypass_list);
   }
-  if (pInternetSetOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION,
+  if (pInternetSetOption_(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION,
                          &list, nSize)) {
     DebugLog("npswitchproxy: InternetSetOption succeeded.\n");
     return true;

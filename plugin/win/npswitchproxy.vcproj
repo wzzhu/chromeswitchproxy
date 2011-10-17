@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;xulrunner-sdk\include&quot;"
+				AdditionalIncludeDirectories="../npapi_sdk"
 				PreprocessorDefinitions="DEBUG;WIN32;_WINDOWS;XP_WIN32;MOZILLA_STRICT_API;XPCOM_GLUE;XP_WIN;_X86_;NPSIMPLE_EXPORTS;XULRUNNER_SDK"
 				MinimalRebuild="true"
 				ExceptionHandling="1"
@@ -67,7 +67,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="2"
-				ModuleDefinitionFile="win\npswitchproxy.def"
+				ModuleDefinitionFile="npswitchproxy.def"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				RandomizedBaseAddress="1"
@@ -121,7 +121,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="3"
-				AdditionalIncludeDirectories="&quot;xulrunner-sdk\include&quot;"
+				AdditionalIncludeDirectories="..\npapi_sdk"
 				PreprocessorDefinitions="WIN32;_WINDOWS;XP_WIN32;MOZILLA_STRICT_API;XPCOM_GLUE;XP_WIN;_X86_;NPSIMPLE_EXPORTS;XULRUNNER_SDK"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="0"
@@ -142,7 +142,7 @@
 				Name="VCLinkerTool"
 				LinkIncremental="2"
 				GenerateManifest="false"
-				ModuleDefinitionFile="win\npswitchproxy.def"
+				ModuleDefinitionFile="npswitchproxy.def"
 				GenerateDebugInformation="false"
 				SubSystem="1"
 				RandomizedBaseAddress="1"
@@ -260,43 +260,19 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\npswitchproxy.cc"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						CompileAs="2"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						CompileAs="2"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Smartphone 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						CompileAs="2"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\win\npswitchproxy.def"
+				RelativePath="..\npswitchproxy.cc"
 				>
 			</File>
 			<File
-				RelativePath=".\proxy_config.cc"
+				RelativePath=".\npswitchproxy.def"
 				>
 			</File>
 			<File
-				RelativePath=".\win\winproxy.cc"
+				RelativePath="..\proxy_config.cc"
+				>
+			</File>
+			<File
+				RelativePath=".\winproxy.cc"
 				>
 			</File>
 			<Filter
@@ -305,15 +281,31 @@
 				UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 				>
 				<File
-					RelativePath=".\npswitchproxy.h"
+					RelativePath="..\npapi_sdk\npapi.h"
 					>
 				</File>
 				<File
-					RelativePath=".\proxy_config.h"
+					RelativePath="..\npapi_sdk\npfunctions.h"
 					>
 				</File>
 				<File
-					RelativePath=".\resource.h"
+					RelativePath="..\npapi_sdk\npruntime.h"
+					>
+				</File>
+				<File
+					RelativePath="..\npswitchproxy.h"
+					>
+				</File>
+				<File
+					RelativePath="..\npapi_sdk\nptypes.h"
+					>
+				</File>
+				<File
+					RelativePath="..\proxy_base.h"
+					>
+				</File>
+				<File
+					RelativePath="..\proxy_config.h"
 					>
 				</File>
 				<File
@@ -321,7 +313,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\win\winproxy.h"
+					RelativePath=".\winproxy.h"
 					>
 				</File>
 			</Filter>

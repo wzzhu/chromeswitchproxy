@@ -19,11 +19,35 @@
 #include <wininet.h>
 #include "../npswitchproxy.h"
 #include "../proxy_config.h"
+#include "../proxy_base.h"
 
-bool PlatformDependentStartup();
-void PlatformDependentShutdown();
-bool GetActiveConnectionName(LPWSTR* connection_name);
-bool GetProxyConfig(ProxyConfig* config);
-bool SetProxyConfig(const ProxyConfig& config);
-char* WStrToUtf8(LPCWSTR str);  // Helper functions to convert widechar to utf8.
+class WinProxy : public ProxyBase {
+ public:
+  WinProxy();
+  ~WinProxy();
+  virtual bool PlatformDependentStartup();
+  virtual void PlatformDependentShutdown();
+  virtual bool GetActiveConnectionName(const void** connection_name);
+  virtual bool GetProxyConfig(ProxyConfig* config);
+  virtual bool SetProxyConfig(const ProxyConfig& config);
+
+private:
+  char* WStrToUtf8(LPCWSTR str);  // Helper functions to convert widechar to utf8.
+  LPWSTR Utf8ToWStr(const char * str);
+  typedef bool (__stdcall* InternetQueryOptionFunc) (
+    HINTERNET hInternet, DWORD dwOption,
+    LPVOID lpBuffer, LPDWORD lpdwBufferLength);
+
+  typedef bool (__stdcall* InternetSetOptionFunc) (
+      HINTERNET hInternet, DWORD dwOption,
+      LPVOID lpBuffer, DWORD dwBufferLength);
+
+  typedef bool (__stdcall* InternetGetConnectedStateExFunc) (
+      LPDWORD lpdwFlags, LPTSTR lpszConnectionName,
+      DWORD dwNameLen, DWORD dwReserved);
+  HINSTANCE hWinInetLib_;
+  InternetQueryOptionFunc pInternetQueryOption_;
+  InternetSetOptionFunc pInternetSetOption_;
+  InternetGetConnectedStateExFunc pInternetGetConnectedStateEx_;
+};
 #endif  // __WIN_WINPROXY_H__
