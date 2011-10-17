@@ -20,7 +20,7 @@ class MacProxy : public ProxyBase {
   ~MacProxy();
   virtual bool PlatformDependentStartup();
   virtual void PlatformDependentShutdown();
-  virtual bool GetActiveConnectionName(const char** connection_name);
+  virtual bool GetActiveConnectionName(const void** connection_name);
   virtual bool GetProxyConfig(ProxyConfig* config);
   virtual bool SetProxyConfig(const ProxyConfig& config);
 

@@ -13,7 +13,7 @@ class ProxyBase {
  public:
   virtual bool PlatformDependentStartup() { return TRUE; }
   virtual void PlatformDependentShutdown() {}
-  virtual bool GetActiveConnectionName(const char** connection_name) = 0;
+  virtual bool GetActiveConnectionName(const void** connection_name) = 0;
   virtual bool GetProxyConfig(ProxyConfig* config) = 0;
   virtual bool SetProxyConfig(const ProxyConfig& config) = 0; 
 };

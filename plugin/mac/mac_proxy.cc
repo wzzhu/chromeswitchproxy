@@ -152,7 +152,7 @@ bool MacProxy::IsNetworkInterfaceActive(SCNetworkInterfaceRef net_if) {
 SCNetworkServiceRef MacProxy::CopyActiveNetworkService(
     SCNetworkSetRef network_set) {
   CFArrayRef services = SCNetworkSetCopyServices(network_set);
-  int arraySize = CFArrayGetCount(services);
+  long arraySize = CFArrayGetCount(services);
   SCNetworkServiceRef active_network_service = NULL;
   for (int i = 0; i < arraySize; ++i) {
     SCNetworkServiceRef service =
@@ -177,7 +177,7 @@ SCNetworkServiceRef MacProxy::CopyActiveNetworkService(
 }
 
 // static
-bool MacProxy::GetActiveConnectionName(const char** connection_name) {
+bool MacProxy::GetActiveConnectionName(const void** connection_name) {
   bool result = false;
   SCPreferencesRef preference = SCPreferencesCreate(
       kCFAllocatorDefault, CFSTR("Chrome Switch Proxy Plugin"), NULL);
@@ -196,7 +196,7 @@ bool MacProxy::GetActiveConnectionName(const char** connection_name) {
     CFStringRef connection_name_ref =
         SCNetworkInterfaceGetLocalizedDisplayName(net_if);
     *connection_name =
-        MacProxy::CreateCStringFromString(connection_name_ref);
+        (void *)MacProxy::CreateCStringFromString(connection_name_ref);
     
     result = true;
   }
@@ -347,7 +347,7 @@ void MacProxy::ParseProxyServerDescription(
         --end_proxy;
       }
       int index = -1;
-      int len = end_proxy - start_proxy + 1;
+      long len = end_proxy - start_proxy + 1;
       if (len == 5 && strncmp("https", start_proxy, len) == 0) {
         index = 1;
       } else if (len == 4 && strncmp("http", start_proxy, len) == 0) {

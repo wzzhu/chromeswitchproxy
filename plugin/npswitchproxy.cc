@@ -148,7 +148,7 @@ static bool GetConnectionName(NPObject* obj, NPVariant* result) {
   DebugLog("npswitchproxy: GetConnectionName\n");
   char* utf8_result;
   const char* connection_name;
-  if (!proxyImpl->GetActiveConnectionName(&connection_name)) {
+  if (!proxyImpl->GetActiveConnectionName((const void **)&connection_name)) {
     utf8_result = npnfuncs->utf8fromidentifier(
         npnfuncs->getstringidentifier("__No connection__"));
   } else {
