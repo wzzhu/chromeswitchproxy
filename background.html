@@ -27,12 +27,12 @@ function updateUI() {
       if (next_click_to_edit) {
         proxy_state += chrome.i18n.getMessage("inPlaceEditPrompt");
         icon_path = "proxy_can_edit.png";
-	popup_html = "popup.html";
+        popup_html = "popup.html";
       }
     } else {
       if (!config.proxyServer) {
         // Let user directly open the popup when we don't have proxies defined.
-	popup_html = "popup.html";
+	      popup_html = "popup.html";
       }
     }
     title = plugin.connectionName + " " + proxy_state;
@@ -63,10 +63,6 @@ chrome.browserAction.onClicked.addListener(function(tab) {
   }
   next_click_to_edit = use_proxy;
   updateUI();
-  if (next_click_to_edit) {
-    // Automatically close editing after 10 seconds.
-    setTimeout("disablePopup();", 10000);
-  }  
 }); 
 
 chrome.tabs.onCreated.addListener(function(tab) {  
@@ -100,7 +96,10 @@ chrome.extension.onRequest.addListener(
       sendResponse({list: proxyList});
     } else if (request.message == 'storeproxylist') {
       storeProxyList(request.data);
-    }    
+    }
+    next_click_to_edit = true;
+    // Automatically close editing after 5 seconds.
+    setTimeout("disablePopup();", 5000);
   });
 
 </script>
