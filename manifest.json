@@ -17,7 +17,7 @@
   "background_page": "background.html",
   "plugins": [
     { "path": "plugin/npswitchproxy.dll", "public": false },
-    { "path": "plugin/npswitchproxy.dylib", "public": false }
+    { "path": "plugin/switchproxy.webplugin", "public": false }
   ],
   "default_locale": "en"
 }
